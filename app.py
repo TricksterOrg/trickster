@@ -10,7 +10,7 @@ from flask import Flask, jsonify
 from trickster.endpoints import internal_api, external_api
 from trickster.router import Router
 
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Any, Optional
 
 
 logger = logging.getLogger()

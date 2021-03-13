@@ -1,11 +1,10 @@
 """Install Trickster and dependencies."""
 
-import sys
-
 from setuptools import setup
 
 
-def main():
+def main() -> None:
+    """Build Trickster package."""
     setup(
         name='trickster',
         version='1.0.0',
