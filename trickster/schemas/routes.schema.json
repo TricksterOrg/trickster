@@ -1,0 +1,198 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "route",
+    "type": "array",
+    "title": "Add routes scheme",
+    "description": "Validation schema for POST /internal/routes",
+    "items": {
+        "type": "object",
+        "description": "Validation schema for POST /internal/route",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Unique identifier of request.",
+                "pattern": "^[\\d\\w]+$"
+            },
+            "path": {
+                "type": "string",
+                "description": "Path to be matched. Supports regular expresion. Starts with /."
+            },
+            "method": {
+                "type": "string",
+                "description": "HTTP method to be mathed. Uppercase.",
+                "enum": [
+                    "GET",
+                    "HEAD",
+                    "POST",
+                    "PUT",
+                    "DELETE",
+                    "CONNECT",
+                    "OPTIONS",
+                    "TRACE",
+                    "PATCH"
+                ]
+            },
+            "response_selection": {
+                "type": "string",
+                "description": "Strategy for selecting response.",
+                "enum": [
+                    "cycle",
+                    "random",
+                    "greedy"
+                ]
+            },
+            "auth": {
+                "description": "Authentication method to be used.",
+                "anyOf": [
+                    {
+                        "type": "object",
+                        "description": "Authentication using base64 username and password.",
+                        "properties": {
+                            "method": {
+                                "const": "basic"
+                            },
+                            "username": {
+                                "type": "string",
+                                "description": "Username."
+                            },
+                            "password": {
+                                "type": "string",
+                                "description": "Password."
+                            }
+                        },
+                        "required": ["method", "username", "password"],
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Authentication using a cookie value.",
+                        "properties": {
+                            "method": {
+                                "const": "cookie"
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "Name of the cookie."
+                            },
+                            "value": {
+                                "type": "string",
+                                "description": "Expected cookie value."
+                            }
+                        },
+                        "required": ["method", "name", "value"],
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Authentication using a HMAC sign.",
+                        "properties": {
+                            "method": {
+                                "const": "hmac"
+                            },
+                            "key": {
+                                "type": "string",
+                                "description": "HMAC key"
+                            }
+                        },
+                        "required": ["method", "key"],
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Authentication using form data.",
+                        "properties": {
+                            "method": {
+                                "const": "form"
+                            },
+                            "fields": {
+                                "type": "object",
+                                "description": "Key:Value pairs expected in the form.",
+                                "additionalProperties" : {
+                                    "type" : "string"
+                                }
+                            }
+                        },
+                        "required": ["method", "fields"],
+                        "additionalProperties": false
+                    },
+                    {
+                        "type": "object",
+                        "description": "Authentication using toke bearer in header.",
+                        "properties": {
+                            "method": {
+                                "const": "token"
+                            },
+                            "token": {
+                                "type": "string",
+                                "description": "Token."
+                            }
+                        },
+                        "required": ["method", "token"],
+                        "additionalProperties": false
+                    }
+                ]
+            },
+            "responses": {
+                "type": "array",
+                "description": "List of responses to be returned.",
+                "items": {
+                    "type": "object",
+                    "description": "Response to be returned.",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "description": "Unique identifier of response.",
+                            "pattern": "^[\\d\\w]+$"
+                        },
+                        "status": {
+                            "type": "integer",
+                            "description": "HTTP status to be returned.",
+                            "minimum": 100
+                        },
+                        "headers": {
+                            "type": "object",
+                            "description": "Extra headers to be returned.",
+                            "additionalProperties" : {
+                                "type" : "string"
+                            }
+                        },
+                        "body": {
+                            "description": "Value to be returned."
+                        },
+                        "repeat": {
+                            "type": "integer",
+                            "description": "Number of times response can be used before it's discarded.",
+                            "minimum": 1
+                        },
+                        "weight": {
+                            "type": "number",
+                            "description": "Weight of the response if random selection is used.",
+                            "minimum": 0.0,
+                            "maximum": 1.0
+                        },
+                        "delay": {
+                            "type": "array",
+                            "description": "Min and max delay in seconds of the response.",
+                            "items": [
+                                {
+                                    "type": "number",
+                                    "description": "Minimal delay.",
+                                    "minimum": 0.0
+                                },
+                                {
+                                    "type": "number",
+                                    "description": "Maximal delay.",
+                                    "minimum": 0.0
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["body"],
+                    "additionalProperties": false
+                }
+            }
+        },
+        "required": ["path", "responses"],
+        "additionalProperties": false
+    }
+}

@@ -1,0 +1,24 @@
+# Generic ignores
+.cache
+.tags
+*.pyc
+__pycache__
+venv
+htmlcov
+_config.json
+.env
+
+# Project files
+.idea
+docker-compose.override.yml
+output
+!output/.gitkeep
+.pytest_cache/
+.mypy_cache/
+.vscode/
+.coverage
+
+# Build
+build
+dist
+trickster.egg-info
