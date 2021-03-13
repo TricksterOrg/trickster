@@ -10,13 +10,13 @@ from flask import Flask, jsonify
 from trickster.endpoints import internal_api, external_api
 from trickster.router import Router
 
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Optional
 
 
 logger = logging.getLogger()
 
 
-def http_error_handler(error: HTTPException) -> Tuple[Dict[str, Any], int]:
+def http_error_handler(error: HTTPException) -> Tuple[Any, Optional[int]]:
     """Handle for 400 error."""
     return jsonify({
         'error': error.name,
