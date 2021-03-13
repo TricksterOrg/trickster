@@ -8,7 +8,7 @@ def main() -> None:
     setup(
         name='trickster',
         version='1.0.0',
-        python_requires='>=3.6',
+        python_requires='>=3.8',
         description='Trickester is a Python/Flask application for mocking REST APIs',
         long_description='',
         url='https://github.com/JakubTesarek/trickster',
