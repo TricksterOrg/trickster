@@ -1,13 +1,20 @@
 """Install Trickster and dependencies."""
 
+import os
+
 from setuptools import setup
+
+
+def get_version() -> str:
+    """Get current package version."""
+    return os.environ.get('PACKAGE_VERSION', 'dev')
 
 
 def main() -> None:
     """Build Trickster package."""
     setup(
         name='trickster',
-        version='1.0.0',
+        version=get_version(),
         python_requires='>=3.8',
         description='Trickester is a Python/Flask application for mocking REST APIs',
         long_description='',

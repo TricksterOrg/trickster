@@ -1,8 +1,8 @@
-name: Publish
+name: Publish to Pypi
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   deploy:
@@ -23,6 +23,7 @@ jobs:
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        PACKAGE_VERSION: ${{ github.event.release.tag_name }}
       run: |
         python setup.py sdist bdist_wheel
         twine upload dist/*
