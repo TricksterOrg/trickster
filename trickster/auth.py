@@ -198,10 +198,10 @@ class HmacAuth(Auth):
                 f'more than {self.past_tolerance} seconds in the past: {timestamp}'
             )
 
-    def _hash_url(self, url: str, query: bytes) -> str:
+    def _hash_url(self, url: str, query: str) -> str:
         """Calculate hash of used url using the hmac key."""
         parsed_url = urllib.parse.urlparse(url)
-        hashable_url = parsed_url.path + '?' + re.sub(r'&hmac_sign=.*$', '', query.decode('utf-8'))
+        hashable_url = parsed_url.path + '?' + re.sub(r'&hmac_sign=.*$', '', query)
         return self._hash_string(hashable_url)
 
     def _check_signature(self, url_hash: str, signature: str) -> None:

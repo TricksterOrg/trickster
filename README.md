@@ -94,7 +94,7 @@ Response specifies the data the should be returned from the API as well as other
 
 #### `weight`
 - Weight specifies how often should the Response returned when `random` `response_selection` is used. Response with twice the weight will be returned twice as often.
-- Default `1.0`
+- Default `0.5`
 - Min `0.0`
 - Max `1.0`
 
@@ -126,3 +126,47 @@ Response specifies the data the should be returned from the API as well as other
 - You can set it to be almost anything and Trickster will return it back to you.
 - If you set `body` to be a string, Trickster will return it as is. You should consider to also set a `content-type` header.
 - If you set `body` to anything else than a string , Trickster will serialize the body to json. If you also don't specify your own `headers`, it will automatically add `{"content-type": "application/json"}`.
+
+### Complete example
+
+```json
+{
+    "id": "universal_endpoint",
+    "path": "/endpoint_\\w*",
+    "method": "GET",
+    "auth": {
+        "method": "basic",
+        "username": "username",
+        "password": "password"
+    },
+    "response_selection": "random",
+    "responses": [
+        {
+            "id": "response_1",
+            "status": 200,
+            "weight": 0.3,
+            "repeat": 3,
+            "delay": [0.1, 0.2],
+            "headers": {
+                "content-type": "application/json"
+            },
+            "body": {
+                "works": true
+            }
+        },
+        {
+            "id": "response_2",
+            "status": 500,
+            "weight": 0.1,
+            "repeat": 3,
+            "delay": [0.1, 0.2],
+            "headers": {
+                "content-type": "application/json"
+            },
+            "body": {
+                "works": false
+            }
+        }
+    ]
+}
+```

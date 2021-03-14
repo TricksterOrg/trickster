@@ -23,7 +23,8 @@ def request_schema(schema_name: str) -> Callable:
         def request_schema_wrapper(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             try:
                 payload = flask.request.get_json()
-                validator = compile_json_schema(schema_name)
+                schema_path = get_schema_path(schema_name)
+                validator = compile_json_schema(schema_path)
                 validator(payload)
                 return func(*args, **kwargs)
             except fastjsonschema.JsonSchemaException as e:
@@ -33,10 +34,9 @@ def request_schema(schema_name: str) -> Callable:
 
 
 @functools.lru_cache
-def compile_json_schema(schema_name: str) -> Callable:
+def compile_json_schema(schema_path: pathlib.Path) -> Callable:
     """Compiles given schema to fastjson validation function."""
-    path = get_schema_path(schema_name)
-    with open(path.absolute()) as schema_file:
+    with open(schema_path.absolute()) as schema_file:
         schema = json.load(schema_file)
         return fastjsonschema.compile(schema)
 

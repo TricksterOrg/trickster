@@ -100,7 +100,7 @@ class ResponseSelectionStrategy(enum.Enum):
         return self.value
 
     @classmethod
-    def deserialize(cls, method: str) -> ResponseSelectionStrategy:
+    def deserialize(cls, method: Optional[str] = None) -> ResponseSelectionStrategy:
         """Convert json to ResponseSelectionStrategy."""
         return cls(method or 'greedy')
 
@@ -111,8 +111,8 @@ class Response:
     def __init__(
         self,
         id: str,
+        body: Any,
         delay: Delay,
-        body: Any = "",
         headers: Optional[Dict[str, Any]] = None,
         status: int = 200,
         repeat: Optional[int] = None,

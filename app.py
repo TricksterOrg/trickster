@@ -17,7 +17,7 @@ logger = logging.getLogger()
 
 
 def http_error_handler(error: HTTPException) -> Tuple[Any, Optional[int]]:
-    """Handle for 400 error."""
+    """Handler for error pages."""
     return jsonify({
         'error': error.name,
         'message': error.description

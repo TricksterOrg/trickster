@@ -58,6 +58,7 @@ def get_route(route_id: str) -> Response:
 
 
 @internal_api.route('/routes/match', methods=['POST'])
+@request_schema('match_route.schema.json')
 def match_route() -> Response:
     """Match configured routes against given request."""
     payload = request.get_json()

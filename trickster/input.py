@@ -47,7 +47,7 @@ class IncommingRequest(abc.ABC):
         """Full url of the request."""
 
     @abc.abstractproperty
-    def query_string(self) -> bytes:
+    def query_string(self) -> str:
         """Query string of the request including ?: `http://domain.com/path<?query>`."""
 
     @abc.abstractproperty
@@ -91,9 +91,9 @@ class IncommingFlaskRequest(IncommingRequest):
         return self.request.url
 
     @property
-    def query_string(self) -> bytes:
-        """Query string of the request including ?: `http://domain.com/path<?query>`."""
-        return self.request.query_string
+    def query_string(self) -> str:
+        """Query string of the request: `http://domain.com/path?<query>`."""
+        return self.request.query_string.decode('utf-8')
 
     @property
     def form(self) -> Dict[str, Any]:
@@ -126,12 +126,12 @@ class IncommingTestRequest:
         parsed_args = {}
         for key, values in args.items():
             parsed_args[key] = values[0] if len(values) == 1 else values
-        return args
+        return parsed_args
 
     @property
-    def query_string(self) -> bytes:
-        """Query string of the request including ?: `http://domain.com/path<?query>`."""
-        return self.parsed_url.query.encode('utf-8')
+    def query_string(self) -> str:
+        """Query string of the request: `http://domain.com/path?<query>`."""
+        return self.parsed_url.query
 
     @property
     def headers(self) -> Dict[str, Any]:

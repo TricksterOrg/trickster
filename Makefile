@@ -37,7 +37,7 @@ check.typing:
 
 check.tests: clean
 	py.test tests/* -s \
-		--cov five_in_row \
+		--cov trickster \
 		--cov-report html \
 		--cov-report term
 
