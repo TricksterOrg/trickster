@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import re
 import json
 import uuid
@@ -135,12 +136,21 @@ class Response:
         else:
             return json.dumps(self.body)
 
+    @property
+    def computed_headers(self) -> str:
+        """Get user-set headers as well as automatic headers."""
+        computed_headers = copy.copy(self.headers)
+        if 'content-type' not in self.headers:
+            if not isinstance(self.body, str):
+                computed_headers['content-type'] = 'application/json'
+        return computed_headers
+
     def as_flask_response(self) -> flask.Response:
         """Convert Request to flask.Response suitable to return from an endpoint."""
         return flask.Response(
             response=self.serialized_body,
             status=self.status,
-            headers=self.headers
+            headers=self.computed_headers
         )
 
     def serialize(self) -> Dict[str, Any]:
@@ -290,9 +300,9 @@ class Router:
             if route_id is None:
                 continue
             if route_id in self.routes:
-                raise RouteConfigurationError(f'Route id {route_id} already exists.')
-            if route_ids.count(route_id):
-                raise RouteConfigurationError(f'Duplicate oute id {route_id}.')
+                raise RouteConfigurationError(f'Route id "{route_id}"" already exists.')
+            if route_ids.count(route_id) > 1:
+                raise RouteConfigurationError(f'Duplicate route id "{route_id}".')
 
     def _generate_route_id(self) -> str:
         """Generate route id."""
