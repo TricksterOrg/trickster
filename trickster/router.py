@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import re
 import json
 import uuid
@@ -136,21 +135,12 @@ class Response:
         else:
             return json.dumps(self.body)
 
-    @property
-    def computed_headers(self) -> str:
-        """Get user-set headers as well as automatic headers."""
-        computed_headers = copy.copy(self.headers)
-        if 'content-type' not in self.headers:
-            if not isinstance(self.body, str):
-                computed_headers['content-type'] = 'application/json'
-        return computed_headers
-
     def as_flask_response(self) -> flask.Response:
         """Convert Request to flask.Response suitable to return from an endpoint."""
         return flask.Response(
             response=self.serialized_body,
             status=self.status,
-            headers=self.computed_headers
+            headers=self.headers
         )
 
     def serialize(self) -> Dict[str, Any]:
@@ -184,7 +174,15 @@ class Response:
     def deserialize(cls, data: Dict[str, Any]) -> Response:
         """Convert json to Response."""
         delay = Delay.deserialize(data.pop('delay', None))
-        return cls(delay=delay, **data)
+
+        if 'headers' in data:
+            headers = data.pop('headers')
+        elif not isinstance(data['body'], str):
+            headers = {'content-type': 'application/json'}
+        else:
+            headers = {}
+
+        return cls(delay=delay, headers=headers, **data)
 
 
 class Route:

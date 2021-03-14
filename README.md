@@ -1,3 +1,4 @@
+
 # Trickster
 Trickster is a Python/Flask application providing configurable API. It allows you to configure requests and responses using REST API.
 
@@ -114,3 +115,14 @@ Response specifies the data the should be returned from the API as well as other
 - When delay is specified, Trickster will wait for a random time between the bounds before returning the response.
 - Delay is an array of two floats - min and max delay, eg. `[0.5, 1.3]`.
 - Default `none`
+
+#### `headers`
+- Object containing `key:value` pairs of headers that will be returned with response.
+- You probably want to at least set the `content-type` header. If you set `body` to be anything but a string and you don't set `headers` at all, Trickster will automatically set them to `{"content-type": "application/json"}`. You can always rewrite the `headers` to anything you want. 
+- Default `{}`
+
+#### `body` *(required)*
+- This is the body of request.
+- You can set it to be almost anything and Trickster will return it back to you.
+- If you set `body` to be a string, Trickster will return it as is. You should consider to also set a `content-type` header.
+- If you set `body` to anything else than a string , Trickster will serialize the body to json. If you also don't specify your own `headers`, it will automatically add `{"content-type": "application/json"}`.
