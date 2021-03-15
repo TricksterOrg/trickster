@@ -1,8 +1,13 @@
 import pytest
 
-from app import app as api_app
+from trickster.api_app import ApiApp
 
 
 @pytest.fixture
 def app():
-    return api_app
+    return ApiApp()
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()

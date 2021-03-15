@@ -8,6 +8,39 @@ Trickster is a Python/Flask application providing configurable API. It allows yo
 - **Performance testing.** When running performance tests, the upstream services might cause a bottleneck. The test then actually tests your infrastructure, not your application. Or you might want to test what your application will do when all the dependencies start responding slowly or raise errors.
 - **Distributing work.** Distributing work on new project between teams is challenging when you don't have a working API. Mock Service allows you to specify and document the API beforehand so everyone can start developing as if they have everything they need.
 
+### Requirements
+Trickster required **Python >=3.8**.
+
+## Installation
+
+### From Pypi
+You may install Trickster as a Pypi package:
+`pip install trickster`
+
+This will also create a command alias so you can start Trickster server by typing:
+`trickster`
+
+### From Github
+Clone the Trickster repository and install the server:
+```
+git clone https://github.com/JakubTesarek/trickster
+cd trickster
+pip install -e ".[dev]"
+```
+To start the Trickster server, type:
+`trickster`
+
+Alternatively, if you are located inside the Trickster root directory, you may start the app using Flask:
+`flask run`
+
+### From Dockerhub
+Trickster provides docker image you can install and run locally or on a server:
+`docker pull tesarekjakub/trickster:latest`
+
+To start the container, type:
+`docker run -p 5000:5000 tesarekjakub/trickster`
+
+https://hub.docker.com/repository/docker/tesarekjakub/trickster
 
 ## Basics
 Trickster provides an API with some predefined endpoints. Using this API you can specify other Routes Trickster should provide. You can also configure how fast it should respond, set of responses from which it should choose and how to choose, if there should be authentication and much more.
