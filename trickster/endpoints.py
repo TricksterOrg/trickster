@@ -21,7 +21,7 @@ def reset_router() -> Response:
     return Response(response='', status=200)
 
 
-@internal_api.route('/route', methods=['POST'])
+@internal_api.route('/routes', methods=['POST'])
 @request_schema('route.schema.json')
 def add_route() -> Response:
     """Create new route."""
@@ -32,24 +32,13 @@ def add_route() -> Response:
         abort(400, str(error))
 
 
-@internal_api.route('/routes', methods=['POST'])
-@request_schema('routes.schema.json')
-def add_routes() -> Response:
-    """Create multiple new routes."""
-    try:
-        routes = current_app.user_router.add_routes(request.get_json())
-        return jsonify([route.serialize() for route in routes])
-    except RouteConfigurationError as error:
-        abort(400, str(error))
-
-
 @internal_api.route('/routes', methods=['GET'])
 def get_all_routes() -> Response:
     """Get list of configured routes and responses."""
     return jsonify(current_app.user_router.serialize())
 
 
-@internal_api.route('/route/<string:route_id>', methods=['GET'])
+@internal_api.route('/routes/<string:route_id>', methods=['GET'])
 def get_route(route_id: str) -> Response:
     """Get single route by id."""
     if route := current_app.user_router.get_route(route_id):
@@ -57,7 +46,7 @@ def get_route(route_id: str) -> Response:
     abort(404, f'Route id "{route_id}" does not exist.')
 
 
-@internal_api.route('/routes/match', methods=['POST'])
+@internal_api.route('/match_route', methods=['POST'])
 @request_schema('match_route.schema.json')
 def match_route() -> Response:
     """Match configured routes against given request."""
@@ -73,7 +62,7 @@ def match_route() -> Response:
     abort(404, 'No route was matched.')
 
 
-@internal_api.route('/route/<string:route_id>/response/<string:response_id>', methods=['GET'])
+@internal_api.route('/routes/<string:route_id>/responses/<string:response_id>', methods=['GET'])
 def get_response(route_id: str, response_id: str) -> Response:
     """Reset router configuration."""
     if route := current_app.user_router.get_route(route_id):

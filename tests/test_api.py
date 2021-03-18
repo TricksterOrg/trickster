@@ -9,7 +9,7 @@ class TestApi:
         assert response.json == []
 
     def test_add_minimal_route(self, client):
-        response = client.post('/internal/route', json={
+        response = client.post('/internal/routes', json={
             'id': 'route1',
             'path': '/path1',
             'responses': [
@@ -44,7 +44,7 @@ class TestApi:
         }
 
     def test_add_full_route(self, client):
-        response = client.post('/internal/route', json={
+        response = client.post('/internal/routes', json={
             'id': 'route1',
             'path': '/endpoint1',
             'method': 'GET',
@@ -138,7 +138,7 @@ class TestApi:
 
 
     def test_append_route(self, client):
-        client.post('/internal/route', json={
+        client.post('/internal/routes', json={
             'id': 'route1',
             'path': '/endpoint1',
             'responses': [
@@ -149,7 +149,7 @@ class TestApi:
             ]
         })
 
-        client.post('/internal/route', json={
+        client.post('/internal/routes', json={
             'id': 'route2',
             'path': '/endpoint2',
             'responses': [
