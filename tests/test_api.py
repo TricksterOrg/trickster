@@ -243,3 +243,135 @@ class TestApi:
         response = client.get('/internal/routes')
         assert response.status_code == 200
         assert response.json == []
+
+
+    def test_update_route(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route1',
+            'path': '/endpoint1',
+            'responses': [
+                {
+                    'body': 'response1'
+                }
+            ]
+        })
+
+        response = client.put('/internal/routes/route1', json={
+            'path': '/endpoint2',
+            'responses': [
+                {
+                    'id': 'response2',
+                    'body': 'response2'
+                }
+            ]
+        })
+        assert response.status_code == 200
+
+        response = client.get('/internal/routes')
+        assert response.status_code == 200
+        assert response.json == [{
+            'auth': None,
+            'id': 'route1',
+            'method': 'GET',
+            'path': '/endpoint2',
+            'response_selection': 'greedy',
+            'responses': [
+                {
+                    'body': 'response2',
+                    'delay': None,
+                    'headers': {},
+                    'id': 'response2',
+                    'is_active': True,
+                    'repeat': None,
+                    'status': 200,
+                    'used_count': 0,
+                    'weight': 0.5
+                }
+            ],
+            'used_count': 0
+        }]
+
+
+    def test_update_route_change_route_id(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route1',
+            'path': '/endpoint1',
+            'responses': [
+                {
+                    'body': 'response1'
+                }
+            ]
+        })
+
+        response = client.put('/internal/routes/route1', json={
+            'id': 'route2',
+            'path': '/endpoint2',
+            'responses': [
+                {
+                    'id': 'response2',
+                    'body': 'response2'
+                }
+            ]
+        })
+        assert response.status_code == 200
+
+        response = client.get('/internal/routes')
+        assert response.status_code == 200
+        assert response.json == [{
+            'auth': None,
+            'id': 'route2',
+            'method': 'GET',
+            'path': '/endpoint2',
+            'response_selection': 'greedy',
+            'responses': [
+                {
+                    'body': 'response2',
+                    'delay': None,
+                    'headers': {},
+                    'id': 'response2',
+                    'is_active': True,
+                    'repeat': None,
+                    'status': 200,
+                    'used_count': 0,
+                    'weight': 0.5
+                }
+            ],
+            'used_count': 0
+        }]
+
+
+    def test_update_route_change_route_id_to_another_that_exists(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route1',
+            'path': '/endpoint1',
+            'responses': [
+                {
+                    'body': 'response1'
+                }
+            ]
+        })
+        client.post('/internal/routes', json={
+            'id': 'route2',
+            'path': '/endpoint2',
+            'responses': [
+                {
+                    'body': 'response2'
+                }
+            ]
+        })
+        response = client.put('/internal/routes/route1', json={
+            'id': 'route2',
+            'path': '/endpoint2',
+            'responses': [
+                {
+                    'id': 'response2',
+                    'body': 'response2'
+                }
+            ]
+        })
+
+        assert response.status_code == 400
+        assert response.json == {
+            'error': 'Bad Request',
+            'message': 'Cannot change route id "route1" to "route2". Route id "route2" already exists.'
+        }

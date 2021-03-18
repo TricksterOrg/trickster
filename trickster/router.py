@@ -292,16 +292,6 @@ class Router:
         """Remove all custom routes."""
         self.routes: OrderedDict[str, Route] = OrderedDict()
 
-    def _validate_route_ids(self, route_ids: List[Optional[str]]) -> None:
-        """Check that there are no duplicate route id."""
-        for route_id in route_ids:
-            if route_id is None:
-                continue
-            if route_id in self.routes:
-                raise RouteConfigurationError(f'Route id "{route_id}"" already exists.')
-            if route_ids.count(route_id) > 1:
-                raise RouteConfigurationError(f'Duplicate route id "{route_id}".')
-
     def _generate_route_id(self) -> str:
         """Generate route id."""
         while True:
@@ -309,27 +299,26 @@ class Router:
             if route_id not in self.routes:
                 return route_id
 
+    def _set_route_id(self, route: Dict[str, Any], id: str = None) -> None:
+        """Det route id if it doesn't already exist. Generate id if not set."""
+        route.setdefault('id', id or self._generate_route_id())
+
     def _add_validated_route(self, route: Dict[str, Any]) -> Route:
         """Add route assuming its id was already validated."""
-        if 'id' not in route:
-            route['id'] = self._generate_route_id()
-
         new_route = Route.deserialize(route)
         self.routes[new_route.id] = new_route
         return new_route
 
+    def route_exists(self, route_id: str) -> bool:
+        """Return True if route with given id already exists."""
+        return route_id in self.routes
+
     def add_route(self, route: Dict[str, Any]) -> Route:
         """Add custom request and matching responses."""
-        self._validate_route_ids([route.get('id')])
+        if self.route_exists(route.get('id', None)):
+            raise RouteConfigurationError(f'Route id "{route["id"]}" already exists.')
+        self._set_route_id(route)
         return self._add_validated_route(route)
-
-    def add_routes(self, routes: List[Dict[str, Any]]) -> List[Route]:
-        """Add multiple custom requests and matching responses."""
-        self._validate_route_ids([route.get('id') for route in routes])
-        result = []
-        for route in routes:
-            result.append(self._add_validated_route(route))
-        return result
 
     def get_route(self, route_id: str) -> Optional[Route]:
         """Get Route by its id."""
@@ -341,6 +330,20 @@ class Router:
             del self.routes[route_id]
         except KeyError:
             pass
+
+    def update_route(self, route: Dict[str, Any], route_id: str) -> Route:
+        """Update route with completely new data."""
+        self._set_route_id(route, route_id)
+        if not self.route_exists(route_id):
+            raise RouteConfigurationError(
+                f'Cannot update route "{route_id}". Route doesn\'t exit.'
+            )
+        elif route_id != route['id'] and self.route_exists(route['id']):
+            raise RouteConfigurationError(
+                f'Cannot change route id "{route_id}" to "{route["id"]}". Route id "{route["id"]}" already exists.'
+            )
+        self.remove_route(route_id)
+        return self._add_validated_route(route)
 
     def match(self, incomming_request: IncommingRequest) -> Optional[Route]:
         """Find matching request and return apropriet response or None if none found."""

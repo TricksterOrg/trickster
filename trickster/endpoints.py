@@ -46,6 +46,19 @@ def get_route(route_id: str) -> Response:
     abort(404, f'Route id "{route_id}" does not exist.')
 
 
+@internal_api.route('/routes/<string:route_id>', methods=['PUT'])
+@request_schema('route.schema.json')
+def replace_route(route_id: str) -> Response:
+    """Replace route with new data."""
+    try:
+        if current_app.user_router.route_exists(route_id):
+            route = current_app.user_router.update_route(request.get_json(), route_id)
+            return make_response(jsonify(route.serialize()), 200)
+        abort(404, f'Route id "{route_id}" does not exist.')
+    except RouteConfigurationError as error:
+        abort(400, str(error))
+
+
 @internal_api.route('/routes/<string:route_id>', methods=['DELETE'])
 def remove_route(route_id: str) -> Response:
     """Remove route by id."""
