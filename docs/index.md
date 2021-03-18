@@ -1,37 +1,42 @@
-## Welcome to GitHub Pages
+# Trickster
+Trickster is a Python/Flask application providing configurable API. It allows you to configure requests and responses using REST API.
 
-You can use the [editor on GitHub](https://github.com/JakubTesarek/trickster/edit/main/docs/index.md) to maintain and preview the content for your website in Markdown files.
+- [Usecases](#usecases)
+- [Requirements](/installation#requirements)
+- [Installation](/installation)
+- [Quickstart](#quickstart)
+- [API](/api)
+    - [Response codes](/api#response-codes)
+    - [Model](/api#model)
+        - [Route](/api#route)
+        - [Response](/api#response)
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Usecases
+- **Local development.** Sometimes your app needs lots of other services to work properly. Setting all that infrastructure might me time consuming and sometimes not even possible. Mock Service allows you to mock all necessary upstream services.
+- **Integration testing.** The same way you need to setup infrastructure to develop locally, it might equally difficult to setup integration environment. Some services are just too hard to configure so you can test all scenarios. By using Mock Service you define expected behaviour. If you later find a bug, it's easy to find if your assumptions about the infrastructure was wrong or if there's a bug somewhere else.
+- **Performance testing.** When running performance tests, the upstream services might cause a bottleneck. The test then actually tests your infrastructure, not your application. Or you might want to test what your application will do when all the dependencies start responding slowly or raise errors.
+- **Distributing work.** Distributing work on new project between teams is challenging when you don't have a working API. Mock Service allows you to specify and document the API beforehand so everyone can start developing as if they have everything they need.
 
-### Markdown
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+## Quickstart
+Create new Route:
 
-```markdown
-Syntax highlighted code block
+```sh
+curl --location --request POST '/internal/routes' --header 'Content-Type: application/json' --data-raw '{
+    "path": "/endpoint",
+    "responses": [
+        {
+            "body": "response"
+        }
+    ]
+}'
+```
+You configured a new Route that lives on `/endpoint`. When you call it, it will return HTTP 200 and string `response`.
 
-# Header 1
-## Header 2
-### Header 3
+You can test it by calling:
 
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+```sh
+curl --location --request GET '/endpoint'
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/JakubTesarek/trickster/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+Of course, Trickster provides way more possibilities to configure how the Routes will work.
