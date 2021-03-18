@@ -12,7 +12,7 @@ from collections import OrderedDict
 
 import flask
 
-from trickster import RouteConfigurationError
+from trickster import RouteConfigurationError, MissingRouteError, DuplicateRouteError
 from trickster.auth import Auth
 from trickster.input import IncommingRequest
 
@@ -232,7 +232,7 @@ class Route:
             if 'id' not in response:
                 response['id'] = str(uuid.uuid4())
             elif response['id'] in result:
-                raise RouteConfigurationError(f'Duplicate response id {response["id"]}.')
+                raise DuplicateRouteError(f'Duplicate response id {response["id"]}.')
 
             result[response['id']] = Response.deserialize(response)
         return result
@@ -316,7 +316,7 @@ class Router:
     def add_route(self, route: Dict[str, Any]) -> Route:
         """Add custom request and matching responses."""
         if self.route_exists(route.get('id', None)):
-            raise RouteConfigurationError(f'Route id "{route["id"]}" already exists.')
+            raise DuplicateRouteError(f'Route id "{route["id"]}" already exists.')
         self._set_route_id(route)
         return self._add_validated_route(route)
 
@@ -335,11 +335,11 @@ class Router:
         """Update route with completely new data."""
         self._set_route_id(route, route_id)
         if not self.route_exists(route_id):
-            raise RouteConfigurationError(
-                f'Cannot update route "{route_id}". Route doesn\'t exit.'
+            raise MissingRouteError(
+                f'Cannot update route "{route_id}". Route doesn\'t exist.'
             )
         elif route_id != route['id'] and self.route_exists(route['id']):
-            raise RouteConfigurationError(
+            raise DuplicateRouteError(
                 f'Cannot change route id "{route_id}" to "{route["id"]}". Route id "{route["id"]}" already exists.'
             )
         self.remove_route(route_id)

@@ -265,7 +265,7 @@ class TestApi:
                 }
             ]
         })
-        assert response.status_code == 200
+        assert response.status_code == 201
 
         response = client.get('/internal/routes')
         assert response.status_code == 200
@@ -313,7 +313,7 @@ class TestApi:
                 }
             ]
         })
-        assert response.status_code == 200
+        assert response.status_code == 201
 
         response = client.get('/internal/routes')
         assert response.status_code == 200
@@ -370,8 +370,26 @@ class TestApi:
             ]
         })
 
-        assert response.status_code == 400
+        assert response.status_code == 409
         assert response.json == {
-            'error': 'Bad Request',
+            'error': 'Conflict',
             'message': 'Cannot change route id "route1" to "route2". Route id "route2" already exists.'
+        }
+
+    def test_update_that_doesnt_exist(self, client):
+        response = client.put('/internal/routes/route1', json={
+            'id': 'route2',
+            'path': '/endpoint2',
+            'responses': [
+                {
+                    'id': 'response2',
+                    'body': 'response2'
+                }
+            ]
+        })
+
+        assert response.status_code == 404
+        assert response.json == {
+            'error': 'Not Found',
+            'message': 'Cannot update route "route1". Route doesn\'t exist.'
         }

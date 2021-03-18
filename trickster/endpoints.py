@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flask import Blueprint, Response, request, current_app, jsonify, abort, make_response
 
-from trickster.router import RouteConfigurationError
+from trickster import RouteConfigurationError
 from trickster.input import IncommingTestRequest, IncommingFlaskRequest, HTTP_METHODS
 from trickster.validation import request_schema
 from trickster.auth import AuthenticationError
@@ -28,21 +28,21 @@ def add_route() -> Response:
         route = current_app.user_router.add_route(request.get_json())
         return make_response(jsonify(route.serialize()), 201)
     except RouteConfigurationError as error:
-        abort(400, str(error))
+        abort(error.http_code, str(error))
 
 
 @internal_api.route('/routes', methods=['DELETE'])
 def remove_all_routes() -> Response:
     """Reset router configuration."""
     current_app.user_router.reset()
-    return make_response('', 200)
+    return make_response('', 204)
 
 
 @internal_api.route('/routes/<string:route_id>', methods=['GET'])
 def get_route(route_id: str) -> Response:
     """Get route by id."""
     if route := current_app.user_router.get_route(route_id):
-        return make_response(jsonify(route.serialize()), 204)
+        return make_response(jsonify(route.serialize()), 200)
     abort(404, f'Route id "{route_id}" does not exist.')
 
 
@@ -51,12 +51,10 @@ def get_route(route_id: str) -> Response:
 def replace_route(route_id: str) -> Response:
     """Replace route with new data."""
     try:
-        if current_app.user_router.route_exists(route_id):
-            route = current_app.user_router.update_route(request.get_json(), route_id)
-            return make_response(jsonify(route.serialize()), 200)
-        abort(404, f'Route id "{route_id}" does not exist.')
+        route = current_app.user_router.update_route(request.get_json(), route_id)
+        return make_response(jsonify(route.serialize()), 201)
     except RouteConfigurationError as error:
-        abort(400, str(error))
+        abort(error.http_code, str(error))
 
 
 @internal_api.route('/routes/<string:route_id>', methods=['DELETE'])
