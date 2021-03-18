@@ -40,9 +40,18 @@ def remove_all_routes() -> Response:
 
 @internal_api.route('/routes/<string:route_id>', methods=['GET'])
 def get_route(route_id: str) -> Response:
-    """Get single route by id."""
+    """Get route by id."""
     if route := current_app.user_router.get_route(route_id):
-        return make_response(jsonify(route.serialize()), 200)
+        return make_response(jsonify(route.serialize()), 204)
+    abort(404, f'Route id "{route_id}" does not exist.')
+
+
+@internal_api.route('/routes/<string:route_id>', methods=['DELETE'])
+def remove_route(route_id: str) -> Response:
+    """Remove route by id."""
+    if current_app.user_router.get_route(route_id):
+        current_app.user_router.remove_route(route_id)
+        return make_response('', 204)
     abort(404, f'Route id "{route_id}" does not exist.')
 
 

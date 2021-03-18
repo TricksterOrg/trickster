@@ -223,3 +223,23 @@ class TestApi:
         response = client.get('/internal/routes')
         assert response.status_code == 200
         assert response.json == []
+
+
+    def test_create_and_delete_route(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route1',
+            'path': '/endpoint1',
+            'responses': [
+                {
+                    'id': 'response1',
+                    'body': 'response1'
+                }
+            ]
+        })
+
+        response = client.delete('/internal/routes/route1')
+        assert response.status_code == 204
+        
+        response = client.get('/internal/routes')
+        assert response.status_code == 200
+        assert response.json == []

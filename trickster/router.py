@@ -335,6 +335,13 @@ class Router:
         """Get Route by its id."""
         return self.routes.get(route_id, None)
 
+    def remove_route(self, route_id: str) -> None:
+        """Remove Route by its id."""
+        try:
+            del self.routes[route_id]
+        except KeyError:
+            pass
+
     def match(self, incomming_request: IncommingRequest) -> Optional[Route]:
         """Find matching request and return apropriet response or None if none found."""
         for route in self.routes.values():
