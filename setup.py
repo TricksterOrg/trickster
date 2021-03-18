@@ -12,7 +12,7 @@ def get_version() -> str:
 
 def get_long_description() -> str:
     """Get long description of package."""
-    pwd = os.path.abspath(path.dirname(__file__))
+    pwd = os.path.abspath(os.path.dirname(__file__))
     with open(os.path.join(pwd, 'README.md'), encoding='utf-8') as f:
         return f.read()
 
@@ -25,7 +25,7 @@ def main() -> None:
         python_requires='>=3.8',
         description='Trickester is a Python/Flask application for mocking REST APIs',
         long_description=get_long_description(),
-        long_description_content_type='text/markdown'
+        long_description_content_type='text/markdown',
         url='https://github.com/JakubTesarek/trickster',
         author='Jakub Tesarek',
         author_email='jakub@tesarek.me',
