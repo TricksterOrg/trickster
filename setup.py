@@ -10,6 +10,14 @@ def get_version() -> str:
     return os.environ.get('PACKAGE_VERSION', 'dev')
 
 
+def get_long_description() -> str:
+    """Get long description of package."""
+    return '''Trickster is a Python/Flask application providing configurable API.
+It allows you to configure requests and responses using REST API.
+
+[Documentation](https://github.com/JakubTesarek/trickster#trickster)'''
+
+
 def main() -> None:
     """Build Trickster package."""
     setup(
@@ -17,7 +25,7 @@ def main() -> None:
         version=get_version(),
         python_requires='>=3.8',
         description='Trickester is a Python/Flask application for mocking REST APIs',
-        long_description='',
+        long_description=get_long_description(),
         url='https://github.com/JakubTesarek/trickster',
         author='Jakub Tesarek',
         author_email='jakub@tesarek.me',
