@@ -20,7 +20,7 @@ class TestApi:
             ]
         })
 
-        assert response.status_code == 200
+        assert response.status_code == 201
         assert response.json == {
             'auth': None,
             'id': 'route1',
@@ -84,7 +84,7 @@ class TestApi:
             ]
         })
 
-        assert response.status_code == 200
+        assert response.status_code == 201
         assert response.json == {
             'auth': {
                 'method': 'basic',

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, Response, request, current_app, jsonify, abort
+from flask import Blueprint, Response, request, current_app, jsonify, abort, make_response
 
 from trickster.router import RouteConfigurationError
 from trickster.input import IncommingTestRequest, IncommingFlaskRequest, HTTP_METHODS
@@ -14,11 +14,10 @@ internal_api = Blueprint('internal_api', __name__)
 external_api = Blueprint('external_api', __name__)
 
 
-@internal_api.route('/routes', methods=['DELETE'])
-def reset_router() -> Response:
-    """Reset router configuration."""
-    current_app.user_router.reset()
-    return Response(response='', status=200)
+@internal_api.route('/routes', methods=['GET'])
+def get_all_routes() -> Response:
+    """Get list of configured routes and responses."""
+    return jsonify(current_app.user_router.serialize())
 
 
 @internal_api.route('/routes', methods=['POST'])
@@ -27,22 +26,23 @@ def add_route() -> Response:
     """Create new route."""
     try:
         route = current_app.user_router.add_route(request.get_json())
-        return jsonify(route.serialize())
+        return make_response(jsonify(route.serialize()), 201)
     except RouteConfigurationError as error:
         abort(400, str(error))
 
 
-@internal_api.route('/routes', methods=['GET'])
-def get_all_routes() -> Response:
-    """Get list of configured routes and responses."""
-    return jsonify(current_app.user_router.serialize())
+@internal_api.route('/routes', methods=['DELETE'])
+def remove_all_routes() -> Response:
+    """Reset router configuration."""
+    current_app.user_router.reset()
+    return make_response('', 200)
 
 
 @internal_api.route('/routes/<string:route_id>', methods=['GET'])
 def get_route(route_id: str) -> Response:
     """Get single route by id."""
     if route := current_app.user_router.get_route(route_id):
-        return jsonify(route.serialize())
+        return make_response(jsonify(route.serialize()), 200)
     abort(404, f'Route id "{route_id}" does not exist.')
 
 
@@ -58,7 +58,7 @@ def match_route() -> Response:
     )
 
     if route := current_app.user_router.match(incomming_request):
-        return jsonify(route.serialize())
+        return make_response(jsonify(route.serialize()), 200)
     abort(404, 'No route was matched.')
 
 
@@ -67,7 +67,7 @@ def get_response(route_id: str, response_id: str) -> Response:
     """Reset router configuration."""
     if route := current_app.user_router.get_route(route_id):
         if response := route.get_response(response_id):
-            return jsonify(response.serialize())
+            return make_response(jsonify(response.serialize()), 200)
         abort(404, f'Response id "{response_id}" does not exist in request id "{route_id}".')
     abort(404, f'Route id "{route_id}" does not exist.')
 
