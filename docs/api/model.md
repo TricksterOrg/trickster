@@ -7,10 +7,40 @@ parent: API
 
 
 # Model
+{: .no_toc }
+
 This section describes entities that live inside Trickster, their properties and purpose.
 
 1. TOC
 {:toc}
+
+
+## Error
+Error is a read-only object returned from Trickster when an error occured during processing a request. It is always returned alongside any of [the error http codes](/trickster/api/response_codes.html).
+
+**Example:**
+
+```
+{"error": "Not Found", "message": "Error message."}
+```
+
+### `error`
+
+<div markdown="1">
+read only
+{: .label .label-blue }
+</div>
+
+- Short name of the error.
+
+### `message`
+
+<div markdown="1">
+read only
+{: .label .label-blue }
+</div>
+
+- Long description containing details about the error.
 
 
 ## Route

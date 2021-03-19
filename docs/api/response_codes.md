@@ -7,6 +7,8 @@ parent: API
 
 
 # Response codes
+{: .no_toc }
+
 These are the common HTTP codes, API returns:
 
 1. TOC

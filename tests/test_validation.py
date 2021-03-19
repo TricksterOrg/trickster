@@ -47,7 +47,7 @@ class TestJsonSchemaValidation:
         app = flask.Flask(__name__)
 
         @app.route('/', methods=['POST'])
-        @request_schema('match_route.schema.json')
+        @request_schema('request.schema.json')
         def endpoint():
             return 'success'
 
@@ -63,7 +63,7 @@ class TestJsonSchemaValidation:
         app = flask.Flask(__name__)
 
         @app.route('/', methods=['POST'])
-        @request_schema('match_route.schema.json')
+        @request_schema('request.schema.json')
         def endpoint():
             return 'success'
 

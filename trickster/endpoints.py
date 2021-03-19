@@ -73,7 +73,7 @@ def remove_route(route_id: str) -> Response:
 
 
 @internal_api.route('/match_route', methods=['POST'])
-@request_schema('match_route.schema.json')
+@request_schema('request.schema.json')
 def match_route() -> Response:
     """Match configured routes against given request."""
     payload = request.get_json()
