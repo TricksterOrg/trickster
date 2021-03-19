@@ -7,15 +7,8 @@ nav_exclude: true
 # Trickster
 Trickster is a Python/Flask application providing configurable API. It allows you to configure requests and responses using REST API.
 
-- [Usecases](#usecases)
-- [Requirements](/trickster/installation#requirements)
-- [Installation](/trickster/installation)
-- [Quickstart](#quickstart)
-- [API](/trickster/api)
-    - [Response codes](/trickster/api#response-codes)
-    - [Model](/trickster/api#model)
-        - [Route](/trickster/api#route)
-        - [Response](/trickster/api#response)
+1. TOC
+{:toc}
 
 ## Usecases
 - **Local development.** Sometimes your app needs lots of other services to work properly. Setting all that infrastructure might me time consuming and sometimes not even possible. Mock Service allows you to mock all necessary upstream services.

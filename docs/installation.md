@@ -6,6 +6,9 @@ nav_order: 1
 
 # Installation
 
+1. TOC
+{:toc}
+
 ## Requirements
 Trickster requires **Python >=3.8**.
 
