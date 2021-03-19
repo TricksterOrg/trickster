@@ -15,7 +15,7 @@ build.pypi: clean
 	python setup.py sdist bdist_wheel
 
 build.docker: clean
-	 docker build -t tesarekjakub/trickster:${PACKAGE_VERSION} .
+	docker build -t tesarekjakub/trickster:${PACKAGE_VERSION} .
 
 publish.pypi:
 	twine upload dist/*

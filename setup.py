@@ -33,6 +33,7 @@ def main() -> None:
         include_package_data=True,
         packages=['trickster'],
         install_requires=[
+            'gunicorn',
             'flask',
             'fastjsonschema',
             'basicauth'
