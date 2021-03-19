@@ -1,10 +1,20 @@
+---
+layout: default
+nav_order: 2
+---
+
+
+## Table of contents
+{: .no_toc .text-delta }
+
+1. TOC
+{:toc}
+
+
 # API
 Trickster provides an API with some predefined endpoints. Using this API you can specify other Routes Trickster should provide. You can also configure how fast it should respond, set of responses from which it should choose and how to choose, if there should be authentication and much more.
 
-- [Response codes](#response-codes)
-- [Model](#model)
-    - [Route](#route)
-    - [Response](#response)
+
 
 ## Response codes
 These are the common HTTP codes, API returns:

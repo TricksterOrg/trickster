@@ -1,3 +1,9 @@
+---
+layout: default
+nav_exclude: true
+---
+
+
 # Trickster
 Trickster is a Python/Flask application providing configurable API. It allows you to configure requests and responses using REST API.
 
