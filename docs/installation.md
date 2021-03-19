@@ -5,6 +5,7 @@ nav_order: 1
 
 
 # Installation
+{: .no_toc }
 
 1. TOC
 {:toc}

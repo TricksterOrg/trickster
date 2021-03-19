@@ -5,6 +5,8 @@ nav_exclude: true
 
 
 # Trickster
+{: .no_toc }
+
 Trickster is a Python/Flask application providing configurable API. It allows you to configure requests and responses using REST API.
 
 1. TOC
