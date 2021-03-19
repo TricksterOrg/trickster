@@ -14,6 +14,12 @@ internal_api = Blueprint('internal_api', __name__)
 external_api = Blueprint('external_api', __name__)
 
 
+@internal_api.route('/health', methods=['GET'])
+def health() -> Response:
+    """Returns internal app status."""
+    return jsonify({'status': 'ok'})
+
+
 @internal_api.route('/routes', methods=['GET'])
 def get_all_routes() -> Response:
     """Get list of configured routes and responses."""

@@ -4,6 +4,12 @@ from pathlib import Path
 
 @pytest.mark.integration
 class TestApi:
+    def test_get_health(self, client):
+        response = client.get('/internal/health')
+
+        assert response.status_code == 200
+        assert response.json == {'status': 'ok'}
+
     def test_get_empty_routes(self, client):
         response = client.get('/internal/routes')
         assert response.json == []
