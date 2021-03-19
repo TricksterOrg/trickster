@@ -6,7 +6,7 @@ parent: API
 ---
 
 
-## Model
+# Model
 This section describes entities that live inside Trickster, their properties and purpose.
 
 1. TOC
@@ -16,35 +16,66 @@ This section describes entities that live inside Trickster, their properties and
 ## Route
 Route is the base of Trickster. Each rRoute specify what kind of requests it should match and Responses it should return when it's matched.
 
-### `path` *(required)*
+### `path`
+
+required
+{: .label .label_red }
+
 - Path is the url after the hostname the Route should match.
 - Path may either be a string or regular expression. If you use regex, you it must match the whole url, otherwise the Route will not be used. Eg. `/endpoint_.` will match `/endpoint_1` or `/endpoint_a` but not `/endpoint_42`. Internally Trickster uses [Python's `re.match`](https://docs.python.org/3/library/re.html).
 - If multiple routes match the request, the fist one that was added will be used.
 
 ### `method`
+
+optional
+{: .label .label_green }
+
 - The method which the Route should match.
 - Default `GET`.
 - Allowed values are `GET`, `HEAD`, `POST`, `PUT`, `DELETE` `CONNECT`, `OPTIONS`, `TRACE` and `PATCH`.
 
-### `id` *(unique)*
+### `id`
+
+unique
+{: .label .label_yellow }
+
+optional
+{: .label .label_green }
+
 - Unique identifier that can be later used to query the Route details.
 - Must be a string consisting from letters, numbers and underscore.
 - If you don't provide an id, Trickster will generate one.
 
-### `used_count` *(read only)*
+### `used_count`
+
+read only
+{: .label .label_blue }
+
 - Integer counter of how many times was the Route used to handle a request.
 
 ### `authentication`
+
+optional
+{: .label .label_green }
+
 - If there's an authentication method specified for a Route and the Route matches a request, it will then attempt to authenticate the request. If the authentication fails, it will return `401 Unauthorized` instead of standard response.
 - By default there's no authentication.
 - Authentication details are explained in further section.
 
 ### `responses`
+
+required
+{: .label .label_red }
+
 - List of Response objects
 - When Route matches request, it will return one the responses based on the configured `response_selection`.
 - When Route runs out of available Responses, it will return `404 Not Found` instead.
 
 ### `response_selection`
+
+optional
+{: .label .label_green }
+
 - Algorithm that will be used to select the response that will be returned when the Route matches a request.
 - Default `greedy`
 - Allowed values:
@@ -52,12 +83,21 @@ Route is the base of Trickster. Each rRoute specify what kind of requests it sho
     - `random`: Return random response from all valid responses. You may use `Response.weight` to set the random distribution of Responses.
     - `cycle`: Cycle through all Responses in the order in which they were specified. Skips Responses that are no longer valid.
 
+
 ## Response
 Response specifies the data the should be returned from the API as well as other behaviour.
 
-### `id` *(unique within a Route)*
+### `id`
+
+unique
+{: .label .label_yellow }
+
+optional
+{: .label .label_green }
+
 - Unique identifier that can be later used in combination with the Route id to query the Response details.
 - Must be a string consisting from letters, numbers and underscore.
+- Must be unique within a single Route.
 - If you don't provide an id, Trickster will generate one.
 
 ### `status`
@@ -66,35 +106,63 @@ Response specifies the data the should be returned from the API as well as other
 - All HTTP statuses (including 700) are supported.
 
 ### `weight`
+
+optional
+{: .label .label_green }
+
 - Weight specifies how often should the Response returned when `random` `response_selection` is used. Response with twice the weight will be returned twice as often.
 - Default `0.5`
 - Min `0.0`
 - Max `1.0`
 
 ### `used_count` *(read only)*
+
+read only
+{: .label .label_blue }
+
 - Integer counter of how many times was the Response returned from the API.
 
 ### `repeat`
+
+optional
+{: .label .label_green }
+
 - Number of times the response can be returned from the API before it's deactivated.
 - When set to `null`, it will never get deactivated.
 - Default: `null`
 
-### `is_active` *(read only)*
+### `is_active`
+
+read only
+{: .label .label_blue }
+
 - `Boolen`
 - The value is `true` until all allowed repeats of Response were exhausted.
 - When `is_active` is `false`, the response cannot be returned anymore.
 
 ### `delay`
+
+optional
+{: .label .label_green }
+
 - When delay is specified, Trickster will wait for a random time between the bounds before returning the response.
 - Delay is an array of two floats - min and max delay, eg. `[0.5, 1.3]`.
 - Default `none`
 
 ### `headers`
+
+optional
+{: .label .label_green }
+
 - Object containing `key:value` pairs of headers that will be returned with response.
 - You probably want to at least set the `content-type` header. If you set `body` to be anything but a string and you don't set `headers` at all, Trickster will automatically set them to `{"content-type": "application/json"}`. You can always rewrite the `headers` to anything you want. 
 - Default `{}`
 
-### `body` *(required)*
+### `body`
+
+required
+{: .label .label_red }
+
 - This is the body of request.
 - You can set it to be almost anything and Trickster will return it back to you.
 - If you set `body` to be a string, Trickster will return it as is. You should consider to also set a `content-type` header.
