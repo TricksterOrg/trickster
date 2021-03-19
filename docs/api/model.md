@@ -16,7 +16,7 @@ This section describes entities that live inside Trickster, their properties and
 
 
 ## Error
-Error is a read-only object returned from Trickster when an error occured during processing a request. It is always returned alongside any of [the error http codes](/trickster/api/response_codes.html).
+Error is a read-only object returned from Trickster when an error occured during processing a request. It is always returned alongside any of [the error http codes](/trickster/api/response-codes.html).
 
 **Example:**
 

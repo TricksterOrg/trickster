@@ -33,6 +33,7 @@ def main() -> None:
         include_package_data=True,
         packages=['trickster'],
         install_requires=[
+            'click',
             'gunicorn',
             'flask',
             'fastjsonschema',
@@ -54,6 +55,11 @@ def main() -> None:
                 'pytest-mock',
                 'mypy',
                 'twine'
+            ]
+        },
+        entry_points={
+            'console_scripts': [
+                'trickster=cli:cli'
             ]
         }
     )
