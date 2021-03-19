@@ -26,13 +26,13 @@ jobs:
         python -m pip install ".[dev]"
     - name: Lint with flake8
       run: |
-        trickster style
+        flake8 .
     - name: Test with pytest
       run: |
-        trickster tests
+        py.test --cov trickster --cov app.py --cov cli.py
     - name: Test with mypy
       run: |
-        trickster types
+        mypy trickster app.py cli.py
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
