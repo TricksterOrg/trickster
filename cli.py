@@ -10,9 +10,36 @@ from flask.cli import FlaskGroup
 
 from trickster.api_app import ApiApp
 
+from typing import List
+
+
+TESTABLE_FILES = [
+    'trickster',
+    'app.py',
+    'cli.py'
+]
+
+JUNK_FILES = [
+    '*/*.pyc',
+    '*/__pycache__',
+    '.mypy_cache',
+    '*.egg-info',
+    '.pytest_cache',
+    '.benchmarks',
+    'htmlcov',
+    '.coverage',
+    'build',
+    'dist'
+]
+
 
 logger = logging.getLogger()
 app = ApiApp()
+
+
+def execute(command: List[str]) -> None:
+    """Execute shell command given as a list of arguments."""
+    os.system(' '.join(command))
 
 
 @click.group(cls=FlaskGroup)
@@ -21,61 +48,48 @@ def cli() -> None:
 
 
 @cli.command()
-def tests() -> None:
+@click.option('--tag', '-t', type=click.Choice(['integration', 'unit'], case_sensitive=False))
+@click.option('--cov/--no-cov', default=True)
+def tests(tag: str = None, cov: bool = True) -> None:
     """Run all tests."""
-    os.system('''
-    py.test \
-        --cov trickster \
-        --cov app.py \
-        --cov cli.py \
-        --cov-report html \
-        --cov-report term
-    ''')
+    click.secho('Running tests', fg='yellow')
+    command = ['py.test']
+    if tag:
+        command += [f' -m {tag}']
+    if cov:
+        for file in TESTABLE_FILES:
+            command += ['--cov', file]
+        for report in ['term', 'html']:
+            command += ['--cov-report', report]
+    execute(command)
 
 
 @cli.command()
 def style() -> None:
     """Check coding style."""
-    os.system('flake8 .')
+    click.secho('Running style checks', fg='yellow')
+    execute(['flake8', *TESTABLE_FILES])
 
 
 @cli.command()
 def types() -> None:
     """Check typing."""
-    os.system('mypy trickster app.py cli.py')
+    click.secho('Running type checks', fg='yellow')
+    execute(['mypy', *TESTABLE_FILES])
 
 
 @cli.command()
 @click.pass_context
 def check(ctx: click.Context) -> None:
     """Run all checks."""
-    click.secho('Running tests', fg='yellow')
-    ctx.invoke(tests)
-
-    click.secho('Running style checks', fg='yellow')
-    ctx.invoke(style)
-
-    click.secho('Running type checks', fg='yellow')
-    ctx.invoke(types)
+    for check in [tests, style, types]:
+        ctx.invoke(check)
 
 
 @cli.command()
 def clean() -> None:
     """Remove all temp file."""
-    junk_files_patterns = [
-        '*/*.pyc',
-        '*/__pycache__',
-        '.mypy_cache',
-        '*.egg-info',
-        '.pytest_cache',
-        '.benchmarks',
-        'htmlcov',
-        '.coverage',
-        'build',
-        'dist'
-    ]
-
-    for pattern in junk_files_patterns:
+    for pattern in JUNK_FILES:
         for file in glob.glob(pattern):
             try:
                 if os.path.isfile(file):
