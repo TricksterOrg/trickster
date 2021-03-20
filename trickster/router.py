@@ -219,10 +219,7 @@ class Route:
 
     def get_response(self, response_id: str) -> Optional[Response]:
         """Get a Response by its id."""
-        for response in self.responses.values():
-            if response.id == response_id:
-                return response
-        return None
+        return self.responses.get(response_id, None)
 
     @classmethod
     def _create_responses(cls, responses: List[Dict[str, Any]]) -> OrderedDict[str, Response]:
@@ -255,7 +252,7 @@ class Route:
             **data
         )
 
-    def use(self, response: Optional[Response]) -> None:
+    def use(self, response: Response = None) -> None:
         """Increment use counter of this Route and given Response."""
         self.used_count += 1
         if response:

@@ -1,4 +1,5 @@
 import re
+from collections import OrderedDict
 
 import pytest
 import flask
@@ -6,6 +7,7 @@ import flask
 from trickster.auth import NoAuth
 from trickster import RouteConfigurationError
 from trickster.router import Delay, Response, ResponseSelectionStrategy, Route
+from trickster.input import IncommingTestRequest
 
 
 @pytest.mark.unit
@@ -198,7 +200,6 @@ class TestResponseSelectionStrategy:
         strategy = ResponseSelectionStrategy.deserialize()
         assert strategy == ResponseSelectionStrategy.greedy
 
-
     def test_serialize(self):
         assert ResponseSelectionStrategy.cycle.serialize() == 'cycle'
         assert ResponseSelectionStrategy.random.serialize() == 'random'
@@ -218,7 +219,6 @@ class TestResponseSelectionStrategy:
         assert strategy.select_response([r1, r2]) is r2
         r2.use()
         assert strategy.select_response([r1, r2]) is None
-        
 
     def test_cycle_selection(self):
         strategy = ResponseSelectionStrategy.cycle
@@ -295,7 +295,6 @@ class TestRoute:
         assert isinstance(route.auth, NoAuth)
         assert route.response_selection == ResponseSelectionStrategy.greedy
 
-
     def test_deserialize_duplicate_response_ids(self):
         with pytest.raises(RouteConfigurationError):
             route = Route.deserialize({
@@ -312,3 +311,97 @@ class TestRoute:
                     }
                 ]
             })
+
+    def test_deserialize(self):
+        route = Route(
+            id='id1',
+            responses=OrderedDict(),
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+
+        assert route.serialize() == {
+            'id': 'id1',
+            'responses': [],
+            'response_selection': 'random',
+            'path': '/test.*',
+            'auth': None,
+            'method': 'GET',
+            'used_count': 0
+        }
+
+    def test_get_response_found(self):
+        r1 = Response('id1', 'string', Delay())
+        r2 = Response('id2', 'string', Delay())
+        route = Route(
+            id='id1',
+            responses=OrderedDict({
+                'id1': r1,
+                'id2': r2
+            }),
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+
+        assert route.get_response('id1') is r1
+
+    def test_get_response_not_found(self):
+        r1 = Response('id1', 'string', Delay())
+        route = Route(
+            id='id1',
+            responses=OrderedDict({'id1': r1}),
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+
+        assert route.get_response('id3') is None
+
+    def test_use(self):
+        response = Response('id1', 'string', Delay())
+        route = Route(
+            id='id1',
+            responses=OrderedDict({'id1': response}),
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+
+        route.use(response)
+        assert route.used_count == 1
+        assert response.used_count == 1
+
+    def test_use_without_response(self):
+        route = Route(
+            id='id1',
+            responses=OrderedDict(),
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+
+        route.use(None)
+        assert route.used_count == 1
+
+    def test_match(self):
+        route = Route(
+            id='id1',
+            responses=OrderedDict(),
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+        request = IncommingTestRequest(
+            base_url='http://localhost/',
+            full_path='/test_url',
+            method='GET'
+        )
+        assert route.match(request)
