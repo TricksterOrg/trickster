@@ -32,7 +32,6 @@ JUNK_FILES = [
     'dist'
 ]
 
-
 logger = logging.getLogger()
 app = ApiApp()
 

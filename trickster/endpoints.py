@@ -22,8 +22,8 @@ def health() -> Response:
 
 @internal_api.route('/routes', methods=['GET'])
 def get_all_routes() -> Response:
-    """Get list of configured routes and responses."""
-    return jsonify(current_app.user_router.serialize())
+    """Get list of configured Routes."""
+    return jsonify(current_app.user_router.routes.serialize())
 
 
 @internal_api.route('/routes', methods=['POST'])

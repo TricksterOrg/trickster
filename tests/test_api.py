@@ -297,7 +297,6 @@ class TestApi:
             'used_count': 0
         }]
 
-
     def test_update_route_change_route_id(self, client):
         client.post('/internal/routes', json={
             'id': 'route1',
@@ -382,7 +381,7 @@ class TestApi:
             'message': 'Cannot change route id "route1" to "route2". Route id "route2" already exists.'
         }
 
-    def test_update_that_doesnt_exist(self, client):
+    def test_update_route_that_doesnt_exist(self, client):
         response = client.put('/internal/routes/route1', json={
             'id': 'route2',
             'path': '/endpoint2',
@@ -399,3 +398,73 @@ class TestApi:
             'error': 'Not Found',
             'message': 'Cannot update route "route1". Route doesn\'t exist.'
         }
+
+    def test_append_duplicate_route(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route1',
+            'path': '/endpoint1',
+            'responses': [
+                {
+                    'id': 'response1',
+                    'body': 'response1'
+                }
+            ]
+        })
+
+        response = client.post('/internal/routes', json={
+            'id': 'route1',
+            'path': '/endpoint2',
+            'responses': [
+                {
+                    'id': 'response2',
+                    'body': 'response2'
+                }
+            ]
+        })
+
+        assert response.status_code == 409
+        assert response.json == {
+            'error': 'Conflict',
+            'message': 'Route id "route1" already exists.'
+        }
+
+    def test_match_route(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route',
+            'path': '/endpoint',
+            'responses': [
+                {
+                    'id': 'response',
+                    'body': {'response': 'data'}
+                }
+            ]
+        })
+
+        response = client.get('/endpoint')
+
+        assert response.status_code == 200
+        assert response.json == {'response': 'data'}
+
+    def test_match_route_from_multiple(self, client):
+        client.post('/internal/routes', json={
+            'path': '/endpoint1',
+            'responses': [
+                {
+                    'id': 'response',
+                    'body': {'response': 'data1'}
+                }
+            ]
+        })
+        client.post('/internal/routes', json={
+            'path': '/endpoint2',
+            'responses': [
+                {
+                    'id': 'response',
+                    'body': {'response': 'data2'}
+                }
+            ]
+        })
+
+        response = client.get('/endpoint2')
+        assert response.status_code == 200
+        assert response.json == {'response': 'data2'}

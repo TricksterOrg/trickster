@@ -8,13 +8,13 @@ import uuid
 import random
 import enum
 import time
-from collections import OrderedDict
 
 import flask
 
 from trickster import RouteConfigurationError, MissingRouteError, DuplicateRouteError
 from trickster.auth import Auth
 from trickster.input import IncommingRequest
+from trickster.collections import IdItem, IdList
 
 from typing import Optional, Dict, Any, List, Iterable
 
@@ -44,9 +44,7 @@ class Delay:
     @classmethod
     def deserialize(cls, data: List[float]) -> Delay:
         """Convert json to Delay."""
-        if data:
-            return cls(*data)
-        return cls()
+        return cls(*data or [])
 
 
 class ResponseSelectionStrategy(enum.Enum):
@@ -105,7 +103,7 @@ class ResponseSelectionStrategy(enum.Enum):
         return cls(method or 'greedy')
 
 
-class Response:
+class Response(IdItem):
     """Container for predefined response."""
 
     def __init__(
@@ -118,7 +116,7 @@ class Response:
         repeat: Optional[int] = None,
         weight: float = 0.5
     ) -> None:
-        self.id = id
+        super().__init__(id)
         self.body = body
         self.headers = headers or {}
         self.status = status
@@ -146,7 +144,7 @@ class Response:
     def serialize(self) -> Dict[str, Any]:
         """Convert Response to json."""
         return {
-            'id': self.id,
+            **super().serialize(),
             'is_active': self.is_active,
             'status': self.status,
             'used_count': self.used_count,
@@ -185,53 +183,68 @@ class Response:
         return cls(delay=delay, headers=headers, **data)
 
 
-class Route:
+class Route(IdItem):
     """Route is a pair of request arguments and all possible reponses."""
 
     def __init__(
         self,
         id: str,
-        responses: OrderedDict[str, Response],
+        responses: Iterable[Response],
         response_selection: ResponseSelectionStrategy,
         path: re.Pattern,
         auth: Auth,
         method: str = 'GET'
     ):
-        self.id = id
-        self.responses = responses
+        super().__init__(id)
         self.response_selection = response_selection
         self.method = method
         self.path = path
         self.auth = auth
         self.used_count = 0
+        self.responses: IdList[Response] = IdList()
+
+        try:
+            for response in responses:
+                self.responses.add(response)
+        except KeyError:
+            raise DuplicateRouteError(f'Duplicate response id {response.id}.')
+
+    def add_responses(self, responses: Iterable[Response]) -> None:
+        """Add multiple Responses."""
+        for response in responses:
+            self.add_response(response)
+
+    def add_response(self, response: Response) -> None:
+        """Add Response."""
+        try:
+            self.responses.add(response)
+        except KeyError:
+            raise DuplicateRouteError(f'Duplicate response id {response.id}.')
 
     def serialize(self) -> Dict[str, Any]:
         """Convert Route to JSON."""
         return {
-            'id': self.id,
+            **super().serialize(),
             'response_selection': self.response_selection.serialize(),
             'auth': self.auth.serialize(),
             'method': self.method,
             'path': self.path.pattern,
             'used_count': self.used_count,
-            'responses': [response.serialize() for response in self.responses.values()]
+            'responses': self.responses.serialize()
         }
 
     def get_response(self, response_id: str) -> Optional[Response]:
         """Get a Response by its id."""
-        return self.responses.get(response_id, None)
+        return self.responses.get(response_id)
 
     @classmethod
-    def _create_responses(cls, responses: List[Dict[str, Any]]) -> OrderedDict[str, Response]:
+    def _create_responses(cls, responses: List[Dict[str, Any]]) -> List[Response]:
         """Create Response objects from json."""
-        result = OrderedDict()
+        result = []
         for response in responses:
             if 'id' not in response:
                 response['id'] = str(uuid.uuid4())
-            elif response['id'] in result:
-                raise DuplicateRouteError(f'Duplicate response id {response["id"]}.')
-
-            result[response['id']] = Response.deserialize(response)
+            result.append(Response.deserialize(response))
         return result
 
     @classmethod
@@ -272,7 +285,7 @@ class Route:
 
     def select_response(self) -> Optional[Response]:
         """Select response from list of responses."""
-        return self.response_selection.select_response(self.responses.values())
+        return self.response_selection.select_response(self.responses)
 
     def authenticate(self, request: IncommingRequest) -> None:
         """Check if Request if properly authenticated."""
@@ -287,68 +300,55 @@ class Router:
 
     def reset(self) -> None:
         """Remove all custom routes."""
-        self.routes: OrderedDict[str, Route] = OrderedDict()
+        self.routes: IdList[Route] = IdList()
 
     def _generate_route_id(self) -> str:
         """Generate route id."""
-        while True:
-            route_id = str(uuid.uuid4())
-            if route_id not in self.routes:
-                return route_id
+        while (route_id := str(uuid.uuid4())) in self.routes:
+            # It's virtually impossibe to generate the same uuid twice
+            continue  # pragma: no cover
+        return route_id
 
-    def _set_route_id(self, route: Dict[str, Any], id: str = None) -> None:
-        """Det route id if it doesn't already exist. Generate id if not set."""
-        route.setdefault('id', id or self._generate_route_id())
-
-    def _add_validated_route(self, route: Dict[str, Any]) -> Route:
-        """Add route assuming its id was already validated."""
-        new_route = Route.deserialize(route)
-        self.routes[new_route.id] = new_route
-        return new_route
-
-    def route_exists(self, route_id: str) -> bool:
-        """Return True if route with given id already exists."""
-        return route_id in self.routes
+    def _set_route_id(self, route: Dict[str, Any], route_id: str = None) -> None:
+        """Set route id if it doesn't already exist. Generate id if not set."""
+        route.setdefault('id', route_id or self._generate_route_id())
 
     def add_route(self, route: Dict[str, Any]) -> Route:
         """Add custom request and matching responses."""
-        if self.route_exists(route.get('id', None)):
-            raise DuplicateRouteError(f'Route id "{route["id"]}" already exists.')
         self._set_route_id(route)
-        return self._add_validated_route(route)
+        route_object = Route.deserialize(route)
+        try:
+            self.routes.add(route_object)
+        except KeyError:
+            raise DuplicateRouteError(f'Route id "{route_object.id}" already exists.')
+        return route_object
 
     def get_route(self, route_id: str) -> Optional[Route]:
         """Get Route by its id."""
-        return self.routes.get(route_id, None)
+        return self.routes.get(route_id)
 
     def remove_route(self, route_id: str) -> None:
         """Remove Route by its id."""
-        try:
-            del self.routes[route_id]
-        except KeyError:
-            pass
+        self.routes.remove(route_id)
 
     def update_route(self, route: Dict[str, Any], route_id: str) -> Route:
         """Update route with completely new data."""
         self._set_route_id(route, route_id)
-        if not self.route_exists(route_id):
-            raise MissingRouteError(
-                f'Cannot update route "{route_id}". Route doesn\'t exist.'
-            )
-        elif route_id != route['id'] and self.route_exists(route['id']):
+        if route_id != route['id'] and route['id'] in self.routes:
             raise DuplicateRouteError(
                 f'Cannot change route id "{route_id}" to "{route["id"]}". Route id "{route["id"]}" already exists.'
             )
-        self.remove_route(route_id)
-        return self._add_validated_route(route)
+
+        route_object = Route.deserialize(route)
+        try:
+            self.routes.replace(route_id, route_object)
+        except KeyError:
+            raise MissingRouteError(f'Cannot update route "{route_id}". Route doesn\'t exist.')
+        return route_object
 
     def match(self, incomming_request: IncommingRequest) -> Optional[Route]:
-        """Find matching request and return apropriet response or None if none found."""
-        for route in self.routes.values():
+        """Find matching Route and return apropriet Response or None."""
+        for route in self.routes:
             if route.match(incomming_request):
                 return route
         return None
-
-    def serialize(self) -> List[Dict[str, Any]]:
-        """Convert Router to dictionary suitable for sending as api response."""
-        return [route.serialize() for route in self.routes.values()]

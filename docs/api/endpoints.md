@@ -89,7 +89,11 @@ Replaces a previously configured Route with new data.
 
 Use this endpoint if you previously created a Route and want to re-create it with new data.
 
-The `route_id` in url represents the `id` of a Route that will be replaced. The `id` inside the payload will be the new `id`. This way, you can change `id` of a Route. You always have to provide the `route_id` in url. The `id` in payload is optional. If you don't want to change it, it's best if you don't send it at all and the Route will preserve the original `id`.
+The `route_id` in url represents the `id` of the Route that will be replaced. The `id` inside the payload is the new `id`. This way, you can change `id` of a Route.
+
+You always have to provide the `route_id` in url. The `id` in payload is optional. If you don't want to change it, it's best if you don't send it at all and the Route will preserve the original `id`.
+
+Note that this endpoint behaves differently from deleting and inserting the Route. If you remove the Route and then you insert it, it will be put at the end. It means that when Trickster attempts to match a route, the newly created Route will be tested last. In constrast, if you update the Route using this endpoint, it will keep it's original position in the list.
 
 ### Payload
 {: .no_toc }

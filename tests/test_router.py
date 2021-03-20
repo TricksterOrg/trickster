@@ -1,5 +1,4 @@
 import re
-from collections import OrderedDict
 
 import pytest
 import flask
@@ -315,7 +314,7 @@ class TestRoute:
     def test_deserialize(self):
         route = Route(
             id='id1',
-            responses=OrderedDict(),
+            responses=[],
             response_selection=ResponseSelectionStrategy.random,
             path=re.compile(r'/test.*'),
             auth=NoAuth(),
@@ -337,10 +336,7 @@ class TestRoute:
         r2 = Response('id2', 'string', Delay())
         route = Route(
             id='id1',
-            responses=OrderedDict({
-                'id1': r1,
-                'id2': r2
-            }),
+            responses=[r1, r2],
             response_selection=ResponseSelectionStrategy.random,
             path=re.compile(r'/test.*'),
             auth=NoAuth(),
@@ -353,7 +349,7 @@ class TestRoute:
         r1 = Response('id1', 'string', Delay())
         route = Route(
             id='id1',
-            responses=OrderedDict({'id1': r1}),
+            responses=[r1],
             response_selection=ResponseSelectionStrategy.random,
             path=re.compile(r'/test.*'),
             auth=NoAuth(),
@@ -366,7 +362,7 @@ class TestRoute:
         response = Response('id1', 'string', Delay())
         route = Route(
             id='id1',
-            responses=OrderedDict({'id1': response}),
+            responses=[response],
             response_selection=ResponseSelectionStrategy.random,
             path=re.compile(r'/test.*'),
             auth=NoAuth(),
@@ -380,7 +376,7 @@ class TestRoute:
     def test_use_without_response(self):
         route = Route(
             id='id1',
-            responses=OrderedDict(),
+            responses=[],
             response_selection=ResponseSelectionStrategy.random,
             path=re.compile(r'/test.*'),
             auth=NoAuth(),
@@ -393,7 +389,7 @@ class TestRoute:
     def test_match(self):
         route = Route(
             id='id1',
-            responses=OrderedDict(),
+            responses=[],
             response_selection=ResponseSelectionStrategy.random,
             path=re.compile(r'/test.*'),
             auth=NoAuth(),
