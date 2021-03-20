@@ -50,7 +50,7 @@ def cli() -> None:
 @cli.command()
 @click.option('--tag', '-t', type=click.Choice(['integration', 'unit'], case_sensitive=False))
 @click.option('--cov/--no-cov', default=True)
-def tests(tag: str = None, cov: bool = True) -> None:
+def test(tag: str = None, cov: bool = True) -> None:
     """Run all tests."""
     click.secho('Running tests', fg='yellow')
     command = ['py.test']
@@ -82,7 +82,7 @@ def types() -> None:
 @click.pass_context
 def check(ctx: click.Context) -> None:
     """Run all checks."""
-    for check in [tests, style, types]:
+    for check in [test, style, types]:
         ctx.invoke(check)
 
 
