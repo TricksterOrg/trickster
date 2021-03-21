@@ -4,7 +4,7 @@ Trickster is a Python/Flask application providing configurable API. It allows yo
 - [Project Homepage](https://github.com/JakubTesarek/trickster)
 - [Documentation](https://jakubtesarek.github.io/trickster/)
 - [Issues](https://github.com/JakubTesarek/trickster/issues)
-- [PyPi](https://github.com/JakubTesarek/trickster/issues)
+- [PyPi](https://pypi.org/project/trickster)
 - [Dockerhub](https://github.com/JakubTesarek/trickster/issues)
 
 
