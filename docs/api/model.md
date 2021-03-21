@@ -91,6 +91,19 @@ read only
 
 - Integer counter of how many times was the Route used to handle a request.
 
+
+### `is_active`
+
+<div markdown="1">
+read only
+{: .label .label-blue }
+</div>
+
+- `Boolen`
+- The value is `true` if Route has at least one active Response.
+- When `is_active` is `false`, the Route will never match any Request.
+
+
 ### `authentication`
 
 <div markdown="1">

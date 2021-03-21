@@ -86,6 +86,7 @@ You should get something like this:
     {
         "id": "24f7f7c2-a2e4-415b-bb55-aaa0c85b76fd",
         "used_count": 0,
+        "is_active": true,
         "auth": null,
         "method": "GET",
         "path": "/hello_world",

@@ -230,7 +230,8 @@ class Route(IdItem):
             'method': self.method,
             'path': self.path.pattern,
             'used_count': self.used_count,
-            'responses': self.responses.serialize()
+            'responses': self.responses.serialize(),
+            'is_active': self.is_active
         }
 
     def get_response(self, response_id: str) -> Optional[Response]:
@@ -272,8 +273,12 @@ class Route(IdItem):
             response.use()
 
     def match(self, request: IncommingRequest) -> bool:
-        """Return True, if this request specification matches given InputRequest."""
-        return self._match_method(request.method) and self._match_path(request.path)
+        """Return True, if this request specification matches given request and Route is active."""
+        return all([
+            self._match_method(request.method),
+            self._match_path(request.path),
+            self.is_active
+        ])
 
     def _match_method(self, method: Optional[str]) -> bool:
         """Return True, if this requests HTTP method matches given InputRequest."""
@@ -290,6 +295,14 @@ class Route(IdItem):
     def authenticate(self, request: IncommingRequest) -> None:
         """Check if Request if properly authenticated."""
         self.auth.authenticate(request)
+
+    @property
+    def is_active(self) -> bool:
+        """Return True if Route has at least one active Response."""
+        for response in self.responses:
+            if response.is_active:
+                return True
+        return False
 
 
 class Router:

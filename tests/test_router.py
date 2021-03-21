@@ -328,7 +328,8 @@ class TestRoute:
             'path': '/test.*',
             'auth': None,
             'method': 'GET',
-            'used_count': 0
+            'used_count': 0,
+            'is_active': False
         }
 
     def test_get_response_found(self):
@@ -386,10 +387,28 @@ class TestRoute:
         route.use(None)
         assert route.used_count == 1
 
-    def test_match(self):
+    def test_match_not_active(self):
         route = Route(
             id='id1',
             responses=[],
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+        request = IncommingTestRequest(
+            base_url='http://localhost/',
+            full_path='/test_url',
+            method='GET'
+        )
+        assert not route.match(request)
+
+    def test_match_active(self):
+        route = Route(
+            id='id1',
+            responses=[
+                Response('id1', '', Delay(), weight=0.4)
+            ],
             response_selection=ResponseSelectionStrategy.random,
             path=re.compile(r'/test.*'),
             auth=NoAuth(),

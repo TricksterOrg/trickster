@@ -46,7 +46,8 @@ class TestApi:
                     'weight': 0.5
                 }
             ],
-            'used_count': 0
+            'used_count': 0,
+            'is_active': True
         }
 
     def test_add_full_route(self, client):
@@ -139,7 +140,8 @@ class TestApi:
                     'weight': 0.1
                 }
             ],
-            'used_count': 0
+            'used_count': 0,
+            'is_active': True
         }
 
 
@@ -188,7 +190,8 @@ class TestApi:
                         'weight': 0.5
                     }
                 ],
-                'used_count': 0
+                'used_count': 0,
+                'is_active': True
             },
             {
                 'auth': None,
@@ -209,7 +212,8 @@ class TestApi:
                         'weight': 0.5
                     }
                 ],
-                'used_count': 0
+                'used_count': 0,
+                'is_active': True
             }
         ]
 
@@ -294,7 +298,8 @@ class TestApi:
                     'weight': 0.5
                 }
             ],
-            'used_count': 0
+            'used_count': 0,
+            'is_active': True
         }]
 
     def test_update_route_change_route_id(self, client):
@@ -341,7 +346,8 @@ class TestApi:
                     'weight': 0.5
                 }
             ],
-            'used_count': 0
+            'used_count': 0,
+            'is_active': True
         }]
 
 
@@ -469,6 +475,36 @@ class TestApi:
         assert response.status_code == 200
         assert response.json == {'response': 'data2'}
 
+
+    def test_route_doesnt_match_when_it_runs_out_of_response(self, client):
+        client.post('/internal/routes', json={
+            'path': '/endpoint',
+            'responses': [
+                {
+                    'repeat': 1,
+                    'body': {'response': 'data1'}
+                }
+            ]
+        })
+        client.post('/internal/routes', json={
+            'path': '/endpoint',
+            'responses': [
+                {
+                    'id': 'response',
+                    'body': {'response': 'data2'}
+                }
+            ]
+        })
+
+        response = client.get('/endpoint')
+        assert response.status_code == 200
+        assert response.json == {'response': 'data1'}
+
+        response = client.get('/endpoint')
+        assert response.status_code == 200
+        assert response.json == {'response': 'data2'}
+
+
     def test_get_route(self, client):
         client.post('/internal/routes', json={
             'id': 'route_id',
@@ -502,7 +538,8 @@ class TestApi:
                     'weight': 0.5
                 }
             ],
-            'used_count': 0
+            'used_count': 0,
+            'is_active': True
         }
 
     def test_get_route_not_found(self, client):
