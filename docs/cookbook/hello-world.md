@@ -2,7 +2,7 @@
 title: Hello World!
 layout: default
 nav_order: 1
-parent: cookbook
+parent: Cookbook
 ---
 
 # Model
@@ -19,7 +19,7 @@ In this example we will
 {:toc}
 
 ## Check if Trickster is running
-We will use [health endpoint](https://jakubtesarek.github.io/trickster/api/endpoints.html#get-internalhealth).
+We will use [health endpoint](/trickster/api/endpoints.html#get-internalhealth).
 
 Create python file or run this code from console:
 
@@ -36,7 +36,7 @@ When you run this program, it should print out `{'status': 'ok'}`. If it does, c
 Usually there are two types of problems that may occur.
 
 - If you see that `requests.exceptions.ConnectionError` was raised, there was a problem connecting to Trickster. Try to restart it. Check that you don't have a typo in the url and there's nothing blocking port 5000.
-- If you see `AssertionError`, it probably means that Trickster didn't return http code 200. If this happens, `r.json` contains [Error object](https://jakubtesarek.github.io/trickster/api/model.html#error) with details about the problem.
+- If you see `AssertionError`, it probably means that Trickster didn't return http code 200. If this happens, `r.json` contains [Error object](/trickster/api/model.html#error) with details about the problem.
 
 
 ## Create and call a Route
@@ -58,7 +58,7 @@ If you call it now, you will recieve `404 Not Found` and error message:
 }
 ```
 
-We need to tell Trickster that we want him to resolve this url and what it should return. To do so, we have define a [Route](https://jakubtesarek.github.io/trickster/api/model.html#route) with a [Response](https://jakubtesarek.github.io/trickster/api/model.html#response). You can check the documentation for all the available options, for now we'll send only the minimal configuration.
+We need to tell Trickster that we want him to resolve this url and what it should return. To do so, we have define a [Route](/trickster/api/model.html#route) with a [Response](/trickster/api/model.html#response). You can check the documentation for all the available options, for now we'll send only the minimal configuration.
 
 ```python
 import requests

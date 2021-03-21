@@ -20,24 +20,4 @@ Trickster is a Python/Flask application providing configurable API. It allows yo
 
 
 ## Quickstart
-Create new Route:
-
-```sh
-curl --location --request POST '/internal/routes' --header 'Content-Type: application/json' --data-raw '{
-    "path": "/endpoint",
-    "responses": [
-        {
-            "body": "response"
-        }
-    ]
-}'
-```
-You configured a new Route that lives on `/endpoint`. When you call it, it will return HTTP 200 and string `response`.
-
-You can test it by calling:
-
-```sh
-curl --location --request GET '/endpoint'
-```
-
-Of course, Trickster provides way more possibilities to configure how the Routes will work.
+The fastest way to start using the [Hello World example](/trickster/cookbook/hello-world.html). It will quickly walk you throught checking that Trickster is installed properly. You will also create your first route and call it.

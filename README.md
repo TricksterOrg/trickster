@@ -20,20 +20,23 @@ Create new Route:
 
 ```sh
 curl --location --request POST '/internal/routes' --header 'Content-Type: application/json' --data-raw '{
-    "path": "/endpoint",
+    "path": "/hello_world",
     "responses": [
         {
-            "body": "response"
+            "body": "Hello Word!"
         }
     ]
 }'
 ```
-You configured a new Route that lives on `/endpoint`. When you call it, it will return HTTP 200 and string `response`.
+You configured a new Route that lives on `/hello_word`. When you call it, it will return HTTP 200 and string `Hello Word`.
 
 You can test it by calling:
 
 ```sh
-curl --location --request GET '/endpoint'
+curl --location --request GET '/hello_word'
 ```
+
+You can find more information about this example in the [Cookbook](https://jakubtesarek.github.io/trickster/cookbook/hello-world.html).
+
 
 Of course, Trickster provides way more possibilities to configure how the Routes will work. All features are described in [documentation](https://jakubtesarek.github.io/trickster/).
