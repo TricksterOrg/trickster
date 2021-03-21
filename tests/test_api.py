@@ -445,7 +445,7 @@ class TestApi:
         assert response.status_code == 200
         assert response.json == {'response': 'data'}
 
-    def test_match_route_from_multiple(self, client):
+    def test_match_one_route_from_multiple(self, client):
         client.post('/internal/routes', json={
             'path': '/endpoint1',
             'responses': [
@@ -468,3 +468,146 @@ class TestApi:
         response = client.get('/endpoint2')
         assert response.status_code == 200
         assert response.json == {'response': 'data2'}
+
+    def test_get_route(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route_id',
+            'path': '/endpoint',
+            'responses': [
+                {
+                    'id': 'response_id',
+                    'body': 'response'
+                }
+            ]
+        })
+
+        response = client.get('/internal/routes/route_id')
+        assert response.status_code == 200
+        assert response.json == {
+            'auth': None,
+            'id': 'route_id',
+            'method': 'GET',
+            'path': '/endpoint',
+            'response_selection': 'greedy',
+            'responses': [
+                {
+                    'body': 'response',
+                    'delay': None,
+                    'headers': {},
+                    'id': 'response_id',
+                    'is_active': True,
+                    'repeat': None,
+                    'status': 200,
+                    'used_count': 0,
+                    'weight': 0.5
+                }
+            ],
+            'used_count': 0
+        }
+
+    def test_get_route_not_found(self, client):
+        response = client.get('/internal/routes/route_id')
+        assert response.status_code == 404
+        assert response.json == {
+            'error': 'Not Found',
+            'message': 'Route id "route_id" does not exist.'
+        }
+
+    def test_get_responses(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route_id',
+            'path': '/endpoint',
+            'responses': [
+                {
+                    'id': 'response_id1',
+                    'body': 'response1'
+                },
+                {
+                    'id': 'response_id2',
+                    'body': 'response2'
+                }
+            ]
+        })
+
+        response = client.get('/internal/routes/route_id/responses')
+        assert response.status_code == 200
+        assert response.json == [
+            {
+                'body': 'response1',
+                'delay': None,
+                'headers': {},
+                'id': 'response_id1',
+                'is_active': True,
+                'repeat': None,
+                'status': 200,
+                'used_count': 0,
+                'weight': 0.5
+            },
+            {
+                'body': 'response2',
+                'delay': None,
+                'headers': {},
+                'id': 'response_id2',
+                'is_active': True,
+                'repeat': None,
+                'status': 200,
+                'used_count': 0,
+                'weight': 0.5
+            }
+        ]
+
+    def test_get_responses_route_not_found(self, client):
+        response = client.get('/internal/routes/route_id/responses')
+        assert response.status_code == 404
+        assert response.json == {
+            'error': 'Not Found',
+            'message': 'Route id "route_id" does not exist.'
+        }
+
+    def test_get_response(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route_id',
+            'path': '/endpoint',
+            'responses': [
+                {
+                    'id': 'response_id1',
+                    'body': 'response1'
+                }
+            ]
+        })
+
+        response = client.get('/internal/routes/route_id/responses/response_id1')
+        assert response.status_code == 200
+        assert response.json == {
+            'body': 'response1',
+            'delay': None,
+            'headers': {},
+            'id': 'response_id1',
+            'is_active': True,
+            'repeat': None,
+            'status': 200,
+            'used_count': 0,
+            'weight': 0.5
+        }
+
+    def test_get_response_not_found(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route_id',
+            'path': '/endpoint',
+            'responses': []
+        })
+
+        response = client.get('/internal/routes/route_id/responses/response_id')
+        assert response.status_code == 404
+        assert response.json == {
+            'error': 'Not Found',
+            'message': 'Response id "response_id" does not exist in request id "route_id".'
+        }
+
+    def test_get_response_route_not_found(self, client):
+        response = client.get('/internal/routes/route_id/responses/response_id')
+        assert response.status_code == 404
+        assert response.json == {
+            'error': 'Not Found',
+            'message': 'Route id "route_id" does not exist.'
+        }

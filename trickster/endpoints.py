@@ -88,9 +88,17 @@ def match_route() -> Response:
     abort(404, 'No route was matched.')
 
 
+@internal_api.route('/routes/<string:route_id>/responses', methods=['GET'])
+def get_all_responses(route_id: str) -> Response:
+    """Get all responses from given route."""
+    if route := current_app.user_router.get_route(route_id):
+        return make_response(jsonify(route.responses.serialize()), 200)
+    abort(404, f'Route id "{route_id}" does not exist.')
+
+
 @internal_api.route('/routes/<string:route_id>/responses/<string:response_id>', methods=['GET'])
 def get_response(route_id: str, response_id: str) -> Response:
-    """Reset router configuration."""
+    """Get response by id from given route.."""
     if route := current_app.user_router.get_route(route_id):
         if response := route.get_response(response_id):
             return make_response(jsonify(response.serialize()), 200)
