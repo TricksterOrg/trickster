@@ -44,7 +44,7 @@ read only
 
 
 ## Route
-Route is the base of Trickster. Each rRoute specify what kind of requests it should match and Responses it should return when it's matched.
+Route is the base of Trickster. Each Route specifies what kind of requests it should match and Responses it should return when it's matched.
 
 ### `path`
 
