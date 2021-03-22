@@ -6,7 +6,7 @@ from werkzeug.exceptions import HTTPException
 from flask import Flask, jsonify
 
 from trickster.endpoints import internal_api, external_api
-from trickster.router import Router
+from trickster.routing import Router
 
 from typing import Tuple, Any, Optional
 

@@ -5,7 +5,7 @@ import flask
 
 from trickster.auth import NoAuth
 from trickster import RouteConfigurationError
-from trickster.router import Delay, Response, ResponseSelectionStrategy, Route
+from trickster.routing import Delay, Response, ResponseSelectionStrategy, Route
 from trickster.input import IncomingTestRequest
 
 
