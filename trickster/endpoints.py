@@ -109,8 +109,10 @@ def get_response(route_id: str, response_id: str) -> Response:
 @external_api.route('/<path:path>', methods=HTTP_METHODS)
 def respond(path: str) -> Response:
     """Match request againts defined routes and return appropriet response."""
+    incomming_request = IncomingFlaskRequest(request)
     try:
-        if route := current_app.user_router.match(IncomingFlaskRequest(request)):
+        if route := current_app.user_router.match(incomming_request):
+            route.authenticate(incomming_request)
             if response := route.select_response():
                 response.wait()
                 route.use(response)
