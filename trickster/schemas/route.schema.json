@@ -168,17 +168,26 @@
                         "maximum": 1.0
                     },
                     "delay": {
-                        "type": "array",
                         "description": "Min and max delay in seconds of the response.",
-                        "items": [
+                        "anyOf": [
                             {
-                                "type": "number",
-                                "description": "Minimal delay.",
-                                "minimum": 0.0
+                                "type": "array",
+                                "items": [
+                                    {
+                                        "type": "number",
+                                        "description": "Minimal delay.",
+                                        "minimum": 0.0
+                                    },
+                                    {
+                                        "type": "number",
+                                        "description": "Maximal delay.",
+                                        "minimum": 0.0
+                                    }
+                                ]
                             },
                             {
                                 "type": "number",
-                                "description": "Maximal delay.",
+                                "description": "Fixed delay.",
                                 "minimum": 0.0
                             }
                         ]

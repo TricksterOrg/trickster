@@ -95,7 +95,7 @@ You should get something like this:
             {
                 "id": "0b0c65a6-37ea-48b7-96e1-015d3fe23cb6",
                 "body": "Hello World!",
-                "delay": null,
+                "delay": 0.0,
                 "headers": {},
                 "is_active": true,
                 "repeat": null,

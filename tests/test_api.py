@@ -36,7 +36,7 @@ class TestApi:
             'responses': [
                 {
                     'body': 'response1',
-                    'delay': None,
+                    'delay': 0.0,
                     'headers': {},
                     'id': 'response1',
                     'is_active': True,
@@ -107,10 +107,7 @@ class TestApi:
                     'body': {
                         'works': True
                     },
-                    'delay': [
-                        0.1,
-                        0.2
-                    ],
+                    'delay': [0.1, 0.2],
                     'headers': {
                         'content-type': 'application/json'
                     },
@@ -125,10 +122,7 @@ class TestApi:
                     'body': {
                         'works': True
                     },
-                    'delay': [
-                        0.1,
-                        0.2
-                    ],
+                    'delay': [0.1, 0.2],
                     'headers': {
                         'content-type': 'application/json'
                     },
@@ -180,7 +174,7 @@ class TestApi:
                 'responses': [
                     {
                         'body': 'response1',
-                        'delay': None,
+                        'delay': 0.0,
                         'headers': {},
                         'id': 'response1',
                         'is_active': True,
@@ -202,7 +196,7 @@ class TestApi:
                 'responses': [
                     {
                         'body': 'response2',
-                        'delay': None,
+                        'delay': 0.0,
                         'headers': {},
                         'id': 'response2',
                         'is_active': True,
@@ -288,7 +282,7 @@ class TestApi:
             'responses': [
                 {
                     'body': 'response2',
-                    'delay': None,
+                    'delay': 0.0,
                     'headers': {},
                     'id': 'response2',
                     'is_active': True,
@@ -336,7 +330,7 @@ class TestApi:
             'responses': [
                 {
                     'body': 'response2',
-                    'delay': None,
+                    'delay': 0.0,
                     'headers': {},
                     'id': 'response2',
                     'is_active': True,
@@ -528,7 +522,7 @@ class TestApi:
             'responses': [
                 {
                     'body': 'response',
-                    'delay': None,
+                    'delay': 0.0,
                     'headers': {},
                     'id': 'response_id',
                     'is_active': True,
@@ -571,7 +565,7 @@ class TestApi:
         assert response.json == [
             {
                 'body': 'response1',
-                'delay': None,
+                'delay': 0.0,
                 'headers': {},
                 'id': 'response_id1',
                 'is_active': True,
@@ -582,7 +576,7 @@ class TestApi:
             },
             {
                 'body': 'response2',
-                'delay': None,
+                'delay': 0.0,
                 'headers': {},
                 'id': 'response_id2',
                 'is_active': True,
@@ -617,7 +611,7 @@ class TestApi:
         assert response.status_code == 200
         assert response.json == {
             'body': 'response1',
-            'delay': None,
+            'delay': 0.0,
             'headers': {},
             'id': 'response_id1',
             'is_active': True,

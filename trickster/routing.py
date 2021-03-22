@@ -16,7 +16,7 @@ from trickster.auth import Auth
 from trickster.input import IncomingRequest
 from trickster.collections import IdItem, IdList
 
-from typing import Optional, Dict, Any, List, Iterable
+from typing import Optional, Dict, Any, List, Iterable, Union
 
 
 class Delay:
@@ -30,10 +30,10 @@ class Delay:
         self.min_delay = min_delay
         self.max_delay = max_delay
 
-    def serialize(self) -> Optional[List[float]]:
+    def serialize(self) -> Union[Optional[List[float]], float]:
         """Convert Delay to json."""
-        if self.min_delay == self.max_delay == 0.0:
-            return None
+        if self.min_delay == self.max_delay:
+            return self.min_delay  # Express delay as one number
         return [self.min_delay, self.max_delay]
 
     def wait(self) -> None:
@@ -42,9 +42,13 @@ class Delay:
         time.sleep(wait_time)
 
     @classmethod
-    def deserialize(cls, data: List[float]) -> Delay:
+    def deserialize(cls, data: Union[Optional[List[float]], float]) -> Delay:
         """Convert json to Delay."""
-        return cls(*data or [])
+        if data is None:
+            return cls(0.0, 0.0)
+        if isinstance(data, (int, float)):
+            return cls(data, data)
+        return cls(*data)
 
 
 class ResponseSelectionStrategy(enum.Enum):

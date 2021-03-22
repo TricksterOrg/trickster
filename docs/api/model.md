@@ -220,9 +220,11 @@ optional
 {: .label .label-green }
 </div>
 
-- When delay is specified, Trickster will wait for a random time between the bounds before returning the response.
-- Delay is an array of two floats - min and max delay, eg. `[0.5, 1.3]`.
-- Default `none`
+- Delay specifies time in secods Trickster should wait, before returning the response.
+- It can be specified in two ways
+    - As an array of two values, min and max, eg. `[0.5, 1.3]`. Trickster will delay the response by some random number of seconds between these two numbers.
+    - As one number, eg. `0.3`. Trickster will wait exactly the specified number of seconds.
+- Default `0.0`
 
 ### `headers`
 

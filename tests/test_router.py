@@ -21,17 +21,26 @@ class TestDelay:
         assert delay.min_delay == 1.2
         assert delay.max_delay == 3.4
 
+    def test_deserialize_single_number(self):
+        delay = Delay.deserialize(1.2)
+        assert delay.min_delay == 1.2
+        assert delay.max_delay == 1.2
+
     def test_deserialize_invalid(self):
         with pytest.raises(RouteConfigurationError):
             delay = Delay.deserialize([3.4, 1.2])
 
     def test_serialize_empty(self):
         delay = Delay()
-        assert delay.serialize() == None
+        assert delay.serialize() == 0.0
 
     def test_deserialize_not_empty(self):
         delay = Delay(1.2, 3.4)
         assert delay.serialize() == [1.2, 3.4]
+
+    def test_deserialize_not_empty(self):
+        delay = Delay(1.2, 1.2)
+        assert delay.serialize() == 1.2
 
     def test_wait(self, mocker):
         sleep = mocker.patch('time.sleep')
