@@ -11,6 +11,10 @@ from trickster.router import Router
 from typing import Tuple, Any, Optional
 
 
+PORT = 5000
+INTERNAL_PREFIX = '/internal'
+
+
 def http_error_handler(error: HTTPException) -> Tuple[Any, Optional[int]]:
     """Handler for error pages."""
     return jsonify({
@@ -22,8 +26,9 @@ def http_error_handler(error: HTTPException) -> Tuple[Any, Optional[int]]:
 class ApiApp(Flask):
     """Flask application handling API endpoints."""
 
-    def __init__(self) -> None:
+    def __init__(self, internal_prefix: str = INTERNAL_PREFIX) -> None:
         super().__init__(__name__)
+        self.internal_prefix = internal_prefix
         self.user_router = Router()
         self._register_handlers()
         self._register_blueprints()
@@ -34,11 +39,5 @@ class ApiApp(Flask):
 
     def _register_blueprints(self) -> None:
         """Register api endpoints."""
-        self.register_blueprint(internal_api, url_prefix='/internal')
+        self.register_blueprint(internal_api, url_prefix=self.internal_prefix)
         self.register_blueprint(external_api, url_prefix='')
-
-
-def run() -> None:
-    """Start API app."""
-    app = ApiApp()
-    app.run()

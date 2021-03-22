@@ -1,16 +1,11 @@
 """Initialization of CLI app."""
 
-import os
-import glob
-import logging
-import shutil
+import subprocess
 
 import click
-from flask.cli import FlaskGroup
 
-from trickster.api_app import ApiApp
-
-from typing import List
+from trickster.api_app import ApiApp, PORT, INTERNAL_PREFIX
+from trickster.sys import remove_file, multi_glob
 
 
 TESTABLE_FILES = [
@@ -32,49 +27,50 @@ JUNK_FILES = [
     'dist'
 ]
 
-logger = logging.getLogger()
-app = ApiApp()
 
-
-def execute(command: List[str]) -> None:
-    """Execute shell command given as a list of arguments."""
-    os.system(' '.join(command))
-
-
-@click.group(cls=FlaskGroup)
+@click.group()
 def cli() -> None:
-    """Management utility for the Trickster application."""
+    """CLI for Trickster."""
 
 
 @cli.command()
-@click.option('--tag', '-t', type=click.Choice(['integration', 'unit'], case_sensitive=False))
-@click.option('--cov/--no-cov', default=True)
-def test(tag: str = None, cov: bool = True) -> None:
+@click.option('-p', '--port', default=PORT, help='The port to bind to.')
+@click.option('-x', '--prefix', default=INTERNAL_PREFIX, help='Url prefix of internal endpoints.')
+def run(port: int, prefix: str) -> None:
+    """Start local Trickster app."""
+    app = ApiApp(prefix)
+    app.run(port=port)
+
+
+@cli.command()
+@click.option('--no-cov', is_flag=True, default=False)
+@click.option('-t', '--tag', type=click.Choice(['integration', 'unit']))
+def test(no_cov: bool, tag: str) -> None:
     """Run all tests."""
     click.secho('Running tests', fg='yellow')
     command = ['py.test']
     if tag:
-        command += [f' -m {tag}']
-    if cov:
+        command += ['-m', tag]
+    if not no_cov:
         for file in TESTABLE_FILES:
             command += ['--cov', file]
         for report in ['term', 'html']:
             command += ['--cov-report', report]
-    execute(command)
+    subprocess.run(command)
 
 
 @cli.command()
 def style() -> None:
     """Check coding style."""
     click.secho('Running style checks', fg='yellow')
-    execute(['flake8', *TESTABLE_FILES])
+    subprocess.run(['flake8', *TESTABLE_FILES])
 
 
 @cli.command()
 def types() -> None:
     """Check typing."""
     click.secho('Running type checks', fg='yellow')
-    execute(['mypy', *TESTABLE_FILES])
+    subprocess.run(['mypy', *TESTABLE_FILES])
 
 
 @cli.command()
@@ -88,13 +84,9 @@ def check(ctx: click.Context) -> None:
 @cli.command()
 def clean() -> None:
     """Remove all temp file."""
-    for pattern in JUNK_FILES:
-        for file in glob.glob(pattern):
-            try:
-                if os.path.isfile(file):
-                    os.remove(file)
-                else:
-                    shutil.rmtree(file)
-                click.secho(f'Deleted: {file}', fg='green')
-            except Exception as error:
-                click.secho(f'Failed to delete {file}: {str(error)}', fg='red')
+    for file_path in multi_glob(*JUNK_FILES):
+        try:
+            remove_file(file_path)
+            click.secho(f'Deleted: {file_path}', fg='green')
+        except Exception as error:
+            click.secho(f'Failed to delete {file_path}: {str(error)}', fg='red')
