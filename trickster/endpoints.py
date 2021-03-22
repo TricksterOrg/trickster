@@ -5,7 +5,7 @@ from __future__ import annotations
 from flask import Blueprint, Response, request, current_app, jsonify, abort, make_response
 
 from trickster import RouteConfigurationError
-from trickster.input import IncommingTestRequest, IncommingFlaskRequest, HTTP_METHODS
+from trickster.input import IncomingTestRequest, IncomingFlaskRequest, HTTP_METHODS
 from trickster.validation import request_schema
 from trickster.auth import AuthenticationError
 
@@ -77,13 +77,13 @@ def remove_route(route_id: str) -> Response:
 def match_route() -> Response:
     """Match configured routes against given request."""
     payload = request.get_json()
-    incomming_request = IncommingTestRequest(
+    incoming_request = IncomingTestRequest(
         base_url=request.host_url,
         full_path=payload['path'],
         method=payload['method']
     )
 
-    if route := current_app.user_router.match(incomming_request):
+    if route := current_app.user_router.match(incoming_request):
         return make_response(jsonify(route.serialize()), 200)
     abort(404, 'No route was matched.')
 
@@ -110,7 +110,7 @@ def get_response(route_id: str, response_id: str) -> Response:
 def respond(path: str) -> Response:
     """Match request againts defined routes and return appropriet response."""
     try:
-        if route := current_app.user_router.match(IncommingFlaskRequest(request)):
+        if route := current_app.user_router.match(IncomingFlaskRequest(request)):
             if response := route.select_response():
                 response.wait()
                 route.use(response)

@@ -1,4 +1,4 @@
-"""This module provides validation of incomming requests."""
+"""This module provides validation of Incoming requests."""
 
 import json
 import flask

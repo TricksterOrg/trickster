@@ -12,7 +12,7 @@ import hmac
 import basicauth
 
 from trickster import RouteConfigurationError, AuthenticationError
-from trickster.input import IncommingRequest
+from trickster.input import IncomingRequest
 
 from typing import Optional, Type, Any, Dict, Tuple, List
 
@@ -26,8 +26,8 @@ class Auth(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def authenticate(self, request: IncommingRequest) -> None:
-        """Check if IncommingRequest contains valid authentication, raise exception if not."""
+    def authenticate(self, request: IncomingRequest) -> None:
+        """Check if IncomingRequest contains valid authentication, raise exception if not."""
 
     def serialize(self) -> Dict[str, Any]:
         """Convert Auth to json value."""
@@ -62,8 +62,8 @@ class NoAuth(abc.ABC):
 
     method = None
 
-    def authenticate(self, request: IncommingRequest) -> None:
-        """Authenticate IncommingRequest. Always succeds."""
+    def authenticate(self, request: IncomingRequest) -> None:
+        """Authenticate IncomingRequest. Always succeds."""
         return None
 
     def serialize(self) -> None:
@@ -79,7 +79,7 @@ class TokenAuth(Auth):
     def __init__(self, token: str):
         self.token = token
 
-    def _get_header(self, request: IncommingRequest) -> str:
+    def _get_header(self, request: IncomingRequest) -> str:
         """Get value of http header containing authentication token."""
         header = request.headers.get('Authorization')
         if not header:
@@ -94,8 +94,8 @@ class TokenAuth(Auth):
 
         return match['token']
 
-    def authenticate(self, request: IncommingRequest) -> None:
-        """Check if IncommingRequest contains valid token authentication, raise exception if not."""
+    def authenticate(self, request: IncomingRequest) -> None:
+        """Check if IncomingRequest contains valid token authentication, raise exception if not."""
         header = self._get_header(request)
         token = self._get_token(header)
         if token != self.token:
@@ -119,7 +119,7 @@ class BasicAuth(Auth):
         self.username = username
         self.password = password
 
-    def _get_header(self, request: IncommingRequest) -> str:
+    def _get_header(self, request: IncomingRequest) -> str:
         """Get string containing base64 string containting username and password."""
         token = request.headers.get('Authorization')
         if not token:
@@ -133,8 +133,8 @@ class BasicAuth(Auth):
         except basicauth.DecodeError:
             raise AuthenticationError(f'Invalid authentication header {token}.')
 
-    def authenticate(self, request: IncommingRequest) -> None:
-        """Check if IncommingRequest contains valid username and password, raise exception if not."""
+    def authenticate(self, request: IncomingRequest) -> None:
+        """Check if IncomingRequest contains valid username and password, raise exception if not."""
         token = self._get_header(request)
         username, password = self._get_username_password(token)
         if username != self.username or password != self.password:
@@ -209,8 +209,8 @@ class HmacAuth(Auth):
         if not url_hash or url_hash != signature:
             raise AuthenticationError('HMAC authentication failed, hash in URL parameter "hmac_sign" is invalid.')
 
-    def authenticate(self, request: IncommingRequest) -> None:
-        """Check if IncommingRequest contains valid authentication, raise exception if not."""
+    def authenticate(self, request: IncomingRequest) -> None:
+        """Check if IncomingRequest contains valid authentication, raise exception if not."""
         timestamp = self._get_timestamp(request.args)
         signature = self._get_signature(request.args)
         url_hash = self._hash_url(request.url, request.query_string)
@@ -241,8 +241,8 @@ class FormAuth(Auth):
             raise AuthenticationError(f'Missing authentication field "{field}".')
         return form[field]
 
-    def authenticate(self, request: IncommingRequest) -> None:
-        """Check if IncommingRequest contains valid authentication, raise exception if not."""
+    def authenticate(self, request: IncomingRequest) -> None:
+        """Check if IncomingRequest contains valid authentication, raise exception if not."""
         for field, value in self.fields.items():
             sent_value = self._get_field(request.form, field)
             if value != sent_value:
@@ -274,8 +274,8 @@ class CookieAuth(Auth):
             raise AuthenticationError(f'Missing authentication cookie "{self.name}".')
         return cookies[self.name]
 
-    def authenticate(self, request: IncommingRequest) -> None:
-        """Check if IncommingRequest contains valid authentication, raise exception if not."""
+    def authenticate(self, request: IncomingRequest) -> None:
+        """Check if IncomingRequest contains valid authentication, raise exception if not."""
         sent_value = self._get_cookie(request.cookies)
         if self.value != sent_value:
             raise AuthenticationError(

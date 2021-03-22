@@ -13,7 +13,7 @@ import flask
 
 from trickster import RouteConfigurationError, MissingRouteError, DuplicateRouteError
 from trickster.auth import Auth
-from trickster.input import IncommingRequest
+from trickster.input import IncomingRequest
 from trickster.collections import IdItem, IdList
 
 from typing import Optional, Dict, Any, List, Iterable
@@ -272,7 +272,7 @@ class Route(IdItem):
         if response:
             response.use()
 
-    def match(self, request: IncommingRequest) -> bool:
+    def match(self, request: IncomingRequest) -> bool:
         """Return True, if this request specification matches given request and Route is active."""
         return all([
             self._match_method(request.method),
@@ -292,7 +292,7 @@ class Route(IdItem):
         """Select response from list of responses."""
         return self.response_selection.select_response(self.responses)
 
-    def authenticate(self, request: IncommingRequest) -> None:
+    def authenticate(self, request: IncomingRequest) -> None:
         """Check if Request if properly authenticated."""
         self.auth.authenticate(request)
 
@@ -359,9 +359,9 @@ class Router:
             raise MissingRouteError(f'Cannot update route "{route_id}". Route doesn\'t exist.')
         return route_object
 
-    def match(self, incomming_request: IncommingRequest) -> Optional[Route]:
+    def match(self, incoming_request: IncomingRequest) -> Optional[Route]:
         """Find matching Route and return apropriet Response or None."""
         for route in self.routes:
-            if route.match(incomming_request):
+            if route.match(incoming_request):
                 return route
         return None

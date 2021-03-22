@@ -6,7 +6,7 @@ import flask
 from trickster.auth import NoAuth
 from trickster import RouteConfigurationError
 from trickster.router import Delay, Response, ResponseSelectionStrategy, Route
-from trickster.input import IncommingTestRequest
+from trickster.input import IncomingTestRequest
 
 
 @pytest.mark.unit
@@ -396,7 +396,7 @@ class TestRoute:
             auth=NoAuth(),
             method='GET'
         )
-        request = IncommingTestRequest(
+        request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test_url',
             method='GET'
@@ -414,7 +414,7 @@ class TestRoute:
             auth=NoAuth(),
             method='GET'
         )
-        request = IncommingTestRequest(
+        request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test_url',
             method='GET'

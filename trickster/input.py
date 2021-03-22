@@ -1,4 +1,4 @@
-"""Incomming requests."""
+"""Incoming requests."""
 
 from __future__ import annotations
 
@@ -23,8 +23,8 @@ HTTP_METHODS = [
 ]
 
 
-class IncommingRequest(abc.ABC):
-    """Incomming request that can be validated or matched against routes."""
+class IncomingRequest(abc.ABC):
+    """Incoming request that can be validated or matched against routes."""
 
     @abc.abstractproperty
     def method(self) -> str:
@@ -59,7 +59,7 @@ class IncommingRequest(abc.ABC):
         """Dictionary containing cookies."""
 
 
-class IncommingFlaskRequest(IncommingRequest):
+class IncomingFlaskRequest(IncomingRequest):
     """Request made by calling and API endpoint."""
 
     def __init__(self, request: flask.Request):
@@ -106,7 +106,7 @@ class IncommingFlaskRequest(IncommingRequest):
         return self.request.cookies
 
 
-class IncommingTestRequest:
+class IncomingTestRequest:
     """Model of a request used for testing route matching."""
 
     def __init__(self, base_url: str, full_path: str, method: str):
