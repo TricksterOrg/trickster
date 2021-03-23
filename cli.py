@@ -4,8 +4,8 @@ import subprocess
 
 import click
 
-from trickster.api_app import ApiApp, PORT, INTERNAL_PREFIX
-from trickster.sys import remove_file, multi_glob
+from trickster.api_app import ApiApp, INTERNAL_PREFIX, PORT
+from trickster.sys import multi_glob, remove_file
 
 
 TESTABLE_FILES = [

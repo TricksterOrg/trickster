@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import abc
-import re
 import datetime
 import hashlib
-import urllib.parse
 import hmac
+import re
+import urllib.parse
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import basicauth
 
-from trickster import RouteConfigurationError, AuthenticationError
+from trickster import AuthenticationError, RouteConfigurationError
 from trickster.input import IncomingRequest
-
-from typing import Optional, Type, Any, Dict, Tuple, List
 
 
 class Auth(abc.ABC):

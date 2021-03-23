@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import abc
+import urllib.parse
+from typing import Any, Dict
 
 import flask
-import urllib.parse
-
-from typing import Dict, Any
 
 
 HTTP_METHODS = [

@@ -49,6 +49,7 @@ def main() -> None:
                 'flake8-eradicate',
                 'flake8-print',
                 'flake8-todo',
+                'flake8-import-order',
                 'pytest',
                 'pytest-repeat',
                 'pytest-cov',

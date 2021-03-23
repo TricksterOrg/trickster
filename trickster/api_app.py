@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from werkzeug.exceptions import HTTPException
+from typing import Any, Optional, Tuple
+
 from flask import Flask, jsonify
 
-from trickster.endpoints import internal_api, external_api
+from trickster.endpoints import external_api, internal_api
 from trickster.routing import Router
 
-from typing import Tuple, Any, Optional
+from werkzeug.exceptions import HTTPException
 
 
 PORT = 5000

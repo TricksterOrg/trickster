@@ -1,9 +1,8 @@
 """Helper function for interaction with the underlying operating system."""
 
+import glob
 import os
 import shutil
-import glob
-
 from typing import Iterator
 
 

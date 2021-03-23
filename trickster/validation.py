@@ -1,12 +1,13 @@
 """This module provides validation of Incoming requests."""
 
-import json
-import flask
 import functools
-import fastjsonschema
+import json
 import pathlib
+from typing import Any, Callable, Dict, List
 
-from typing import Callable, Any, Dict, List
+import fastjsonschema
+
+import flask
 
 
 schemas_path = pathlib.Path(__file__).parent / 'schemas'

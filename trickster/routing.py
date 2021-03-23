@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-import re
-import json
-import uuid
-import random
 import enum
+import json
+import random
+import re
 import time
+import uuid
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import flask
 
-from trickster import RouteConfigurationError, MissingRouteError, DuplicateRouteError
+from trickster import DuplicateRouteError, MissingRouteError, RouteConfigurationError
 from trickster.auth import Auth
-from trickster.input import IncomingRequest
 from trickster.collections import IdItem, IdList
-
-from typing import Optional, Dict, Any, List, Iterable, Union
+from trickster.input import IncomingRequest
 
 
 class Delay:

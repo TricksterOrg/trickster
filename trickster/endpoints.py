@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, Response, request, current_app, jsonify, abort, make_response
+from flask import Blueprint, Response, abort, current_app, jsonify, make_response, request
 
 from trickster import RouteConfigurationError
-from trickster.input import IncomingTestRequest, IncomingFlaskRequest, HTTP_METHODS
-from trickster.validation import request_schema
 from trickster.auth import AuthenticationError
+from trickster.input import HTTP_METHODS, IncomingFlaskRequest, IncomingTestRequest
+from trickster.validation import request_schema
 
 
 internal_api = Blueprint('internal_api', __name__)

@@ -1,8 +1,7 @@
 """Usefull collections."""
 
 import abc
-
-from typing import Optional, Dict, Any, List, TypeVar, Generic, Iterator
+from typing import Any, Dict, Generic, Iterator, List, Optional, TypeVar
 
 
 class IdItem(abc.ABC):
