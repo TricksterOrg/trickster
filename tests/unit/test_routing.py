@@ -11,44 +11,44 @@ from trickster.input import IncomingTestRequest
 
 @pytest.mark.unit
 class TestDelay:
-    def test_deserialize_empty(self):
+    def test_deserialize_delay_from_none(self):
         delay = Delay.deserialize(None)
         assert delay.min_delay == 0.0
         assert delay.max_delay == 0.0
 
-    def test_deserialize_not_empty(self):
+    def test_deserialize_delay_from_list(self):
         delay = Delay.deserialize([1.2, 3.4])
         assert delay.min_delay == 1.2
         assert delay.max_delay == 3.4
 
-    def test_deserialize_single_number(self):
+    def test_deserialize_delay_from_single_number(self):
         delay = Delay.deserialize(1.2)
         assert delay.min_delay == 1.2
         assert delay.max_delay == 1.2
 
-    def test_deserialize_invalid(self):
+    def test_deserialize_min_larger_than_max(self):
         with pytest.raises(RouteConfigurationError):
             delay = Delay.deserialize([3.4, 1.2])
 
-    def test_serialize_empty(self):
+    def test_serialize_without_arguments(self):
         delay = Delay()
         assert delay.serialize() == 0.0
 
-    def test_deserialize_not_empty(self):
+    def test_serialize_min_and_max(self):
         delay = Delay(1.2, 3.4)
         assert delay.serialize() == [1.2, 3.4]
 
-    def test_deserialize_not_empty(self):
+    def test_serialize_min_and_max_equal(self):
         delay = Delay(1.2, 1.2)
         assert delay.serialize() == 1.2
 
-    def test_wait(self, mocker):
+    def test_wait_calls_sleep(self, mocker):
         sleep = mocker.patch('time.sleep')
         delay = Delay(1.2, 3.4)
         delay.wait()
         sleep.assert_called_once()
 
-    def test_wait_default(self, mocker):
+    def test_wait_with_empty_delay_calls_sleep_with_0(self, mocker):
         sleep = mocker.patch('time.sleep')
         delay = Delay()
         delay.wait()

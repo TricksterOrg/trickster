@@ -1,91 +1,113 @@
+"""Integration tests of API endpoints.
+
+Attributes of objects should be defined in this order:
+
+# Route
+id
+path
+method
+response_selection
+used_count
+is_active
+auth
+responses
+
+
+# Response 
+id
+status
+repeat
+weight
+used_count
+is_active
+delay
+headers
+body
+"""
+
+
 import pytest
 from pathlib import Path
 
 
 @pytest.mark.integration
 class TestApi:
-    def test_get_health(self, client):
-        response = client.get('/internal/health')
-
-        assert response.status_code == 200
-        assert response.json == {'status': 'ok'}
-
     def test_get_empty_routes(self, client):
         response = client.get('/internal/routes')
         assert response.json == []
 
     def test_add_minimal_route(self, client):
         response = client.post('/internal/routes', json={
-            'id': 'route1',
-            'path': '/path1',
+            'id': 'route_id',
+            'path': '/path',
             'responses': [
                 {
-                    'id': 'response1',
-                    'body': 'response1'
+                    'id': 'response_id',
+                    'body': 'response_body'
                 }
             ]
         })
 
         assert response.status_code == 201
         assert response.json == {
-            'auth': None,
-            'id': 'route1',
+            'id': 'route_id',
+            'path': '/path',
             'method': 'GET',
-            'path': '/path1',
             'response_selection': 'greedy',
+            'used_count': 0,
+            'is_active': True,
+            'auth': None,
             'responses': [
                 {
-                    'body': 'response1',
+                    'id': 'response_id',
+                    'status': 200,
+                    'repeat': None,
+                    'weight': 0.5,
+                    'used_count': 0,
+                    'is_active': True,
                     'delay': 0.0,
                     'headers': {},
-                    'id': 'response1',
-                    'is_active': True,
-                    'repeat': None,
-                    'status': 200,
-                    'used_count': 0,
-                    'weight': 0.5
+                    'body': 'response_body'
                 }
-            ],
-            'used_count': 0,
-            'is_active': True
+            ]
         }
 
     def test_add_full_route(self, client):
         response = client.post('/internal/routes', json={
-            'id': 'route1',
-            'path': '/endpoint1',
+            'id': 'route_id',
+            'path': '/endpoint',
             'method': 'GET',
+            'response_selection': 'random',
             'auth': {
                 'method': 'basic',
                 'username': 'username',
                 'password': 'password'
             },
-            'response_selection': 'random',
             'responses': [
                 {
-                    'id': 'response1',
+                    'id': 'response_id1',
                     'status': 200,
-                    'weight': 0.3,
                     'repeat': 3,
-                    'delay': [0.1, 0.2],
+                    'weight': 0.3,
+                    'delay': 0.5,
                     'headers': {
                         'content-type': 'application/json'
                     },
                     'body': {
-                        'works': True
+                        'content': "response_body1"
                     }
                 },
                 {
-                    'id': 'response2',
+                    'id': 'response_id2',
                     'status': 500,
-                    'weight': 0.1,
                     'repeat': 3,
+                    'weight': 0.1,
                     'delay': [0.1, 0.2],
                     'headers': {
                         'content-type': 'application/json'
                     },
                     'body': {
-                        'works': True
+                        'content': "response_body2"
                     }
                 }
             ]
@@ -93,71 +115,71 @@ class TestApi:
 
         assert response.status_code == 201
         assert response.json == {
+            'id': 'route_id',
+            'path': '/endpoint',
+            'method': 'GET',
+            'response_selection': 'random',
+            'used_count': 0,
+            'is_active': True,
             'auth': {
                 'method': 'basic',
                 'password': 'password',
                 'username': 'username'
             },
-            'id': 'route1',
-            'method': 'GET',
-            'path': '/endpoint1',
-            'response_selection': 'random',
             'responses': [
                 {
-                    'body': {
-                        'works': True
-                    },
-                    'delay': [0.1, 0.2],
+                    'id': 'response_id1',
+                    'status': 200,
+                    'repeat': 3,
+                    'weight': 0.3,
+                    'is_active': True,
+                    'used_count': 0,
+                    'delay': 0.5,
                     'headers': {
                         'content-type': 'application/json'
                     },
-                    'id': 'response1',
-                    'is_active': True,
-                    'repeat': 3,
-                    'status': 200,
-                    'used_count': 0,
-                    'weight': 0.3
+                    'body': {
+                        'content': "response_body1"
+                    }
                 },
                 {
-                    'body': {
-                        'works': True
-                    },
+                    'id': 'response_id2',
+                    'status': 500,
+                    'repeat': 3,
+                    'weight': 0.1,
+                    'used_count': 0,
+                    'is_active': True,
                     'delay': [0.1, 0.2],
                     'headers': {
                         'content-type': 'application/json'
                     },
-                    'id': 'response2',
-                    'is_active': True,
-                    'repeat': 3,
-                    'status': 500,
-                    'used_count': 0,
-                    'weight': 0.1
+                    'body': {
+                        'content': "response_body2"
+                    }
                 }
-            ],
-            'used_count': 0,
-            'is_active': True
+            ]
         }
 
 
     def test_append_route(self, client):
         client.post('/internal/routes', json={
-            'id': 'route1',
+            'id': 'route_id1',
             'path': '/endpoint1',
             'responses': [
                 {
-                    'id': 'response1',
-                    'body': 'response1'
+                    'id': 'response_id1',
+                    'body': 'response_body1'
                 }
             ]
         })
 
         client.post('/internal/routes', json={
-            'id': 'route2',
+            'id': 'route_id2',
             'path': '/endpoint2',
             'responses': [
                 {
-                    'id': 'response2',
-                    'body': 'response2'
+                    'id': 'response_id2',
+                    'body': 'response_body2'
                 }
             ]
         })
@@ -166,48 +188,48 @@ class TestApi:
         assert response.status_code == 200
         assert response.json == [
             {
-                'auth': None,
-                'id': 'route1',
-                'method': 'GET',
+                'id': 'route_id1',
                 'path': '/endpoint1',
+                'method': 'GET',
                 'response_selection': 'greedy',
+                'used_count': 0,
+                'is_active': True,
+                'auth': None,
                 'responses': [
                     {
-                        'body': 'response1',
+                        'id': 'response_id1',
+                        'status': 200,
+                        'repeat': None,
+                        'weight': 0.5,
+                        'used_count': 0,
+                        'is_active': True,
                         'delay': 0.0,
                         'headers': {},
-                        'id': 'response1',
-                        'is_active': True,
-                        'repeat': None,
-                        'status': 200,
-                        'used_count': 0,
-                        'weight': 0.5
+                        'body': 'response_body1'
                     }
-                ],
-                'used_count': 0,
-                'is_active': True
+                ]
             },
             {
-                'auth': None,
-                'id': 'route2',
-                'method': 'GET',
+                'id': 'route_id2',
                 'path': '/endpoint2',
+                'method': 'GET',
                 'response_selection': 'greedy',
+                'used_count': 0,
+                'is_active': True,
+                'auth': None,
                 'responses': [
                     {
-                        'body': 'response2',
+                        'id': 'response_id2',
+                        'status': 200,
+                        'repeat': None,
+                        'weight': 0.5,
+                        'used_count': 0,
+                        'is_active': True,
                         'delay': 0.0,
                         'headers': {},
-                        'id': 'response2',
-                        'is_active': True,
-                        'repeat': None,
-                        'status': 200,
-                        'used_count': 0,
-                        'weight': 0.5
+                        'body': 'response_body2'
                     }
-                ],
-                'used_count': 0,
-                'is_active': True
+                ]
             }
         ]
 

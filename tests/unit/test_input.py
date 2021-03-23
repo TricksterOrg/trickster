@@ -7,7 +7,7 @@ from trickster.input import IncomingTestRequest, IncomingFlaskRequest, HTTP_METH
 
 @pytest.mark.unit
 class TestIncomingTestRequest:
-    def test_path(self):
+    def test_path_strips_query(self):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
@@ -15,7 +15,7 @@ class TestIncomingTestRequest:
         )
         assert request.path == '/path/file.json'
 
-    def test_args(self):
+    def test_parse_query_to_args(self):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
@@ -26,7 +26,7 @@ class TestIncomingTestRequest:
             'arg2': '2'
         }
 
-    def test_query_string(self):
+    def test_get_query_string_strips_path(self):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
@@ -34,7 +34,7 @@ class TestIncomingTestRequest:
         )
         assert request.query_string == 'arg1=1&arg2=2'
 
-    def test_headers(self):
+    def test_headers_are_always_empty_dict(self):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
@@ -42,7 +42,7 @@ class TestIncomingTestRequest:
         )
         assert request.headers == {}
 
-    def test_form(self):
+    def test_form_is_always_empty_dict(self):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
@@ -50,7 +50,7 @@ class TestIncomingTestRequest:
         )
         assert request.form == {}
 
-    def test_cookies(self):
+    def test_cookies_are_alway_empty_dict(self):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
@@ -59,7 +59,7 @@ class TestIncomingTestRequest:
         assert request.cookies == {}
 
     @pytest.mark.parametrize('method', HTTP_METHODS)
-    def test_method(self, method):
+    def test_get_method(self, method):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
@@ -70,8 +70,7 @@ class TestIncomingTestRequest:
 
 @pytest.mark.unit
 class TestIncomingFlaskRequest:
-
-    def test_path(self, app):
+    def test_get_path_from_original_request(self, app):
         with app.test_request_context(
             base_url='http://localhost/',
             path='/path/file.json',
@@ -82,7 +81,7 @@ class TestIncomingFlaskRequest:
             request = IncomingFlaskRequest(flask.request)
             assert request.path == '/path/file.json'
 
-    def test_args(self, app):
+    def test_parse_query_to_args(self, app):
         with app.test_request_context(
             base_url='http://localhost/',
             path='/path/file.json',
@@ -94,7 +93,7 @@ class TestIncomingFlaskRequest:
             assert request.args['arg1'] == '1'
             assert request.args['arg2'] == '2'
 
-    def test_query_string(self, app):
+    def test_query_string_from_original_request(self, app):
          with app.test_request_context(
             base_url='http://localhost/',
             path='/path/file.json',
@@ -106,7 +105,7 @@ class TestIncomingFlaskRequest:
             assert request.query_string == 'arg1=1&arg2=2'
 
     @pytest.mark.parametrize('method', HTTP_METHODS)
-    def test_method(self, app, method):
+    def test_get_method_from_original_request(self, app, method):
         with app.test_request_context(
             base_url='http://localhost/',
             path='/path/file.json',
@@ -117,7 +116,7 @@ class TestIncomingFlaskRequest:
             request = IncomingFlaskRequest(flask.request)
             assert request.method == method
 
-    def test_headers(self, app):
+    def test_headers_are_parsed_to_dict(self, app):
         with app.test_request_context(
             base_url='http://localhost/',
             path='/path/file.json',
@@ -128,7 +127,7 @@ class TestIncomingFlaskRequest:
             request = IncomingFlaskRequest(flask.request)
             assert request.headers['Header'] == 'value'
 
-    def test_url(self, app):
+    def test_get_url_combines_all_parts(self, app):
         with app.test_request_context(
             base_url='http://localhost/',
             path='/path/file.json',
@@ -139,7 +138,7 @@ class TestIncomingFlaskRequest:
             request = IncomingFlaskRequest(flask.request)
             assert request.url == 'http://localhost/path/file.json?arg1=1&arg2=2'
 
-    def test_cookies(self, app):
+    def test_cookies_are_parsed_to_dict(self, app):
         with app.test_request_context(
             base_url='http://localhost/',
             path='/path/file.json',
@@ -150,7 +149,7 @@ class TestIncomingFlaskRequest:
             request = IncomingFlaskRequest(flask.request)
             assert len(request.cookies) == 0
 
-    def test_form(self, app):
+    def test_form_is_parsed_to_dict(self, app):
         with app.test_request_context(
             base_url='http://localhost/',
             path='/path/file.json',
