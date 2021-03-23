@@ -108,10 +108,21 @@ class IncomingFlaskRequest(IncomingRequest):
 class IncomingTestRequest:
     """Model of a request used for testing route matching."""
 
-    def __init__(self, base_url: str, full_path: str, method: str):
+    def __init__(
+        self,
+        base_url: str,
+        full_path: str,
+        method: str,
+        headers: Dict[str, str] = None,
+        form: Dict[str, str] = None,
+        cookies: Dict[str, str] = None
+    ):
         self.url = urllib.parse.urljoin(base_url, full_path)
         self.parsed_url = urllib.parse.urlparse(self.url)
         self.method = method
+        self.headers = headers or {}
+        self.form = form or {}
+        self.cookies = cookies or {}
 
     @property
     def path(self) -> str:
@@ -131,18 +142,3 @@ class IncomingTestRequest:
     def query_string(self) -> str:
         """Query string of the request: `http://domain.com/path?<query>`."""
         return self.parsed_url.query
-
-    @property
-    def headers(self) -> Dict[str, Any]:
-        """Dictionary containing headers. Always empty."""
-        return {}
-
-    @property
-    def form(self) -> Dict[str, Any]:
-        """Dictionary containing form data. Always empty."""
-        return {}
-
-    @property
-    def cookies(self) -> Dict[str, Any]:
-        """Dictionary containing cookies. Always empty."""
-        return {}

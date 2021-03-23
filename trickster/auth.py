@@ -21,7 +21,7 @@ class Auth(abc.ABC):
 
     method: Optional[str] = None
 
-    def __init__(self, *args: List, **kwargs: Dict):
+    def __init__(self, *args: List, **kwargs: Dict):  # pragma: no cover
         pass
 
     @abc.abstractmethod
@@ -51,9 +51,9 @@ class Auth(abc.ABC):
         if 'method' in data:
             method = data.pop('method')
             implementation = cls._find_implementation(method)
+            return implementation(**data)
         else:
-            implementation = cls
-        return implementation(**data)
+            raise RouteConfigurationError('Missing field "method" of Auth.')
 
 
 class NoAuth(abc.ABC):

@@ -38,25 +38,28 @@ class TestIncomingTestRequest:
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
-            method='GET'
+            method='GET',
+            headers={'header': 'value'}
         )
-        assert request.headers == {}
+        assert request.headers == {'header': 'value'}
 
-    def test_form_is_always_empty_dict(self):
+    def test_form_from_arg(self):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
-            method='GET'
+            method='GET',
+            form={'field': 'value'}
         )
-        assert request.form == {}
+        assert request.form == {'field': 'value'}
 
     def test_cookies_are_alway_empty_dict(self):
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/path/file.json?arg1=1&arg2=2#anchor',
-            method='GET'
+            method='GET',
+            cookies={'cookie': 'value'}
         )
-        assert request.cookies == {}
+        assert request.cookies == {'cookie': 'value'}
 
     @pytest.mark.parametrize('method', HTTP_METHODS)
     def test_get_method(self, method):

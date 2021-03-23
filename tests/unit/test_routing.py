@@ -459,6 +459,23 @@ class TestRoute:
 
         assert route.is_active == 0
 
+    def test_authenticate(self):
+        route = Route(
+            id='id1',
+            responses=[],
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+        request = IncomingTestRequest(
+            base_url='http://localhost/',
+            full_path='/test_url',
+            method='GET'
+        )
+        route.authenticate(request)
+
+
 @pytest.mark.unit
 class TestRouter:
     def test_initialize_empty_router(self):
