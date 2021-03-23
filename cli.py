@@ -15,16 +15,22 @@ TESTABLE_FILES = [
 ]
 
 JUNK_FILES = [
+    # Cache
     '*/*.pyc',
     '*/__pycache__',
-    '.mypy_cache',
+    # Build
     '*.egg-info',
-    '.pytest_cache',
-    '.benchmarks',
-    'htmlcov',
-    '.coverage',
     'build',
     'dist'
+    # Mypy
+    '.mypy_cache',
+    # Pytest
+    '.pytest_cache',
+    '.benchmarks',
+    # Coverage
+    '.coverage',
+    'htmlcov',
+    'coverage.xml'
 ]
 
 
@@ -54,7 +60,7 @@ def test(no_cov: bool, tag: str) -> None:
     if not no_cov:
         for file in TESTABLE_FILES:
             command += ['--cov', file]
-        for report in ['term', 'html']:
+        for report in ['term', 'html', 'xml']:
             command += ['--cov-report', report]
     subprocess.run(command)
 

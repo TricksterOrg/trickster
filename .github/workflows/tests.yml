@@ -29,7 +29,7 @@ jobs:
         flake8 .
     - name: Test with pytest
       run: |
-        py.test --cov trickster --cov app.py --cov cli.py
+        py.test --cov trickster --cov app.py --cov cli.py --cov-report xml
     - name: Test with mypy
       run: |
         mypy trickster app.py cli.py
@@ -37,5 +37,3 @@ jobs:
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: .coverage
-    

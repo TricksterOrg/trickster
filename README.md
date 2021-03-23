@@ -1,3 +1,5 @@
+[![tests](https://img.shields.io/github/workflow/status/JakubTesarek/trickster/Tests?style=flat-square)](https://github.com/JakubTesarek/trickster/actions/workflows/tests.yml) [![release](https://img.shields.io/github/v/release/JakubTesarek/trickster?style=flat-square)](https://github.com/JakubTesarek/trickster/releases) [![codecov](https://img.shields.io/codecov/c/github/JakubTesarek/trickster?style=flat-square)](https://codecov.io/gh/JakubTesarek/trickster)
+
 # Trickster
 Trickster is a Python/Flask application providing configurable API. It allows you to configure requests and responses using REST API.
 
