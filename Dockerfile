@@ -1,9 +1,9 @@
-FROM python:3.8-buster
+FROM python:3.8-slim
 
 LABEL maintainer="jakub@tesarek.me"
 
 RUN apt-get update -y && \
-    apt-get install -y python-pip python-dev
+    apt-get install -y --no-install-recommends python-pip
 
 WORKDIR /app
 COPY . /app
