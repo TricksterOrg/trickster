@@ -212,18 +212,6 @@ class Route(IdItem):
         except KeyError:
             raise DuplicateRouteError(f'Duplicate response id {response.id}.')
 
-    def add_responses(self, responses: Iterable[Response]) -> None:
-        """Add multiple Responses."""
-        for response in responses:
-            self.add_response(response)
-
-    def add_response(self, response: Response) -> None:
-        """Add Response."""
-        try:
-            self.responses.add(response)
-        except KeyError:
-            raise DuplicateRouteError(f'Duplicate response id {response.id}.')
-
     def serialize(self) -> Dict[str, Any]:
         """Convert Route to JSON."""
         return {

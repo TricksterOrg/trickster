@@ -3,9 +3,10 @@ import re
 import pytest
 import flask
 
+from trickster import DuplicateRouteError, MissingRouteError
 from trickster.auth import NoAuth
 from trickster import RouteConfigurationError
-from trickster.routing import Delay, Response, ResponseSelectionStrategy, Route
+from trickster.routing import Delay, Response, ResponseSelectionStrategy, Route, Router
 from trickster.input import IncomingTestRequest
 
 
@@ -285,6 +286,7 @@ class TestRoute:
         assert route.method == 'GET'
         assert route.auth.method == 'basic'
         assert route.response_selection == ResponseSelectionStrategy.random
+        assert route.is_active == True
 
     def test_deserialize_minimal(self):
         route = Route.deserialize({
@@ -302,6 +304,7 @@ class TestRoute:
         assert route.method == 'GET'
         assert isinstance(route.auth, NoAuth)
         assert route.response_selection == ResponseSelectionStrategy.greedy
+        assert route.is_active == True
 
     def test_deserialize_duplicate_response_ids(self):
         with pytest.raises(RouteConfigurationError):
@@ -368,7 +371,7 @@ class TestRoute:
 
         assert route.get_response('id3') is None
 
-    def test_use(self):
+    def test_use_increases_counter(self):
         response = Response('id1', 'string', Delay())
         route = Route(
             id='id1',
@@ -429,3 +432,251 @@ class TestRoute:
             method='GET'
         )
         assert route.match(request)
+
+    def test_select_response(self):
+        response = Response('id1', 'string', Delay())
+        route = Route(
+            id='id1',
+            responses=[response],
+            response_selection=ResponseSelectionStrategy.greedy,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+
+        assert route.select_response() is response
+
+    def test_is_not_active_if_no_active_response(self):
+        response = Response('id1', 'string', Delay(), repeat=0)
+        route = Route(
+            id='id1',
+            responses=[response],
+            response_selection=ResponseSelectionStrategy.greedy,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET'
+        )
+
+        assert route.is_active == 0
+
+@pytest.mark.unit
+class TestRouter:
+    def test_initialize_empty_router(self):
+        router = Router()
+        assert list(router.routes) == []
+
+    def test_add_route(self):
+        router = Router()
+        route = router.add_route({
+            'id': 'id1',
+            'path': '/endpoint_\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+
+        assert list(router.routes) == [route]
+
+    def test_add_duplicate_route_raises_exception(self):
+        router = Router()
+        route = router.add_route({
+            'id': 'id1',
+            'path': '/endpoint_\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+
+        with pytest.raises(DuplicateRouteError):
+            route = router.add_route({
+                'id': 'id1',
+                'path': '/endpoint_\\w*',
+                'responses': [
+                    {
+                        'id': 'response_1',
+                        'body': {
+                            'works': True
+                        }
+                    }
+                ]
+            })
+
+    def test_get_route(self):
+        router = Router()
+        route = router.add_route({
+            'id': 'id1',
+            'path': '/endpoint_\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+
+        assert router.get_route('id1') is route
+
+    def test_get_route(self):
+        router = Router()
+        assert router.get_route('id1') is None
+
+    def test_remove_route(self):
+        router = Router()
+        route = router.add_route({
+            'id': 'id1',
+            'path': '/endpoint_\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+        router.remove_route('id1')
+        
+        assert list(router.routes) == []
+
+    def test_match_route(self):
+        router = Router()
+        route = router.add_route({
+            'id': 'id1',
+            'path': '/endpoint\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+        request = IncomingTestRequest(
+            base_url='http://localhost/',
+            full_path='/endpoint',
+            method='GET'
+        )
+        
+        assert router.match(request) is route
+
+    def test_match_with_no_matching_route(self):
+        router = Router()
+        route = router.add_route({
+            'id': 'id1',
+            'path': '/endpoint\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+        request = IncomingTestRequest(
+            base_url='http://localhost/',
+            full_path='/test',
+            method='GET'
+        )
+        
+        assert router.match(request) is None
+
+    def test_update_route_not_present(self):
+        router = Router()
+
+        with pytest.raises(MissingRouteError):
+            router.update_route({
+                'id': 'id1',
+                'path': '/endpoint\\w*',
+                'responses': [
+                    {
+                        'id': 'response_1',
+                        'body': {
+                            'works': True
+                        }
+                    }
+                ]
+            }, 'id1')
+
+    def test_update_route_to_that_already_exists(self):
+        router = Router()
+        router.add_route({
+            'id': 'id1',
+            'path': '/endpoint\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+
+        router.add_route({
+            'id': 'id2',
+            'path': '/endpoint\\w*',
+            'responses': [
+                {
+                    'id': 'response_2',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+
+        with pytest.raises(DuplicateRouteError):
+            router.update_route({
+                'id': 'id1',
+                'path': '/endpoint\\w*',
+                'responses': [
+                    {
+                        'id': 'response_1',
+                        'body': {
+                            'works': True
+                        }
+                    }
+                ]
+            }, 'id2')
+
+    def test_update_route_and_change_its_id(self):
+        router = Router()
+        router.add_route({
+            'id': 'id1',
+            'path': '/endpoint\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        })
+
+        router.update_route({
+            'id': 'id2',
+            'path': '/endpoint\\w*',
+            'responses': [
+                {
+                    'id': 'response_1',
+                    'body': {
+                        'works': True
+                    }
+                }
+            ]
+        }, 'id1')
