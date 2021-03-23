@@ -113,10 +113,10 @@ def respond(path: str) -> Response:
     try:
         if route := current_app.user_router.match(incomming_request):
             route.authenticate(incomming_request)
-            if response := route.select_response():
-                response.wait()
-                route.use(response)
-                return response.as_flask_response()
+            response = route.select_response()
+            response.wait()
+            route.use(response)
+            return response.as_flask_response()
         abort(404)
     except AuthenticationError as error:
         abort(401, str(error))

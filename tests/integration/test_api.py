@@ -450,7 +450,7 @@ class TestApi:
             'message': 'Route id "route1" already exists.'
         }
 
-    def test_match_route(self, client):
+    def test_call_route(self, client):
         client.post('/internal/routes', json={
             'id': 'route',
             'path': '/endpoint',
@@ -467,7 +467,16 @@ class TestApi:
         assert response.status_code == 200
         assert response.json == {'response': 'data'}
 
-    def test_match_one_route_from_multiple(self, client):
+    def test_call_route_no_match(self, client):
+        response = client.get('/endpoint')
+
+        assert response.status_code == 404
+        assert response.json == {
+            'error': 'Not Found',
+            'message': 'The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'
+        }
+
+    def test_call_one_route_from_multiple(self, client):
         client.post('/internal/routes', json={
             'path': '/endpoint1',
             'responses': [
@@ -491,8 +500,7 @@ class TestApi:
         assert response.status_code == 200
         assert response.json == {'response': 'data2'}
 
-
-    def test_route_doesnt_match_when_it_runs_out_of_response(self, client):
+    def test_route_doesnt_match_when_it_runs_out_of_responses(self, client):
         client.post('/internal/routes', json={
             'path': '/endpoint',
             'responses': [
@@ -519,7 +527,6 @@ class TestApi:
         response = client.get('/endpoint')
         assert response.status_code == 200
         assert response.json == {'response': 'data2'}
-
 
     def test_get_route(self, client):
         client.post('/internal/routes', json={
@@ -663,4 +670,109 @@ class TestApi:
         assert response.json == {
             'error': 'Not Found',
             'message': 'Route id "route_id" does not exist.'
+        }
+
+    def test_remove_route(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route_id',
+            'path': '/path',
+            'responses': [
+                {
+                    'id': 'response_id',
+                    'body': 'response_body'
+                }
+            ]
+        })
+
+        client.delete('/internal/routes/route_id')
+        response = client.get('/internal/routes')
+        assert response.json == []
+
+    def test_remove_route_that_doesnt_exist(self, client):
+        response = client.delete('/internal/routes/route_id')
+        assert response.status_code == 404
+        assert response.json == {
+            'error': 'Not Found',
+            'message': 'Route id "route_id" does not exist.'
+        }
+
+    def test_match_route(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route_id',
+            'path': '/path',
+            'responses': [
+                {
+                    'id': 'response_id',
+                    'body': 'response_body'
+                }
+            ]
+        })
+
+        response = client.post('/internal/match_route', json={
+            'method': 'GET',
+            'path': '/path',
+        })
+
+        assert response.status_code == 200
+        assert response.json == {
+            'id': 'route_id',
+            'path': '/path',
+            'method': 'GET',
+            'response_selection': 'greedy',
+            'used_count': 0,
+            'is_active': True,
+            'auth': None,
+            'responses': [
+                {
+                    'id': 'response_id',
+                    'status': 200,
+                    'repeat': None,
+                    'weight': 0.5,
+                    'used_count': 0,
+                    'is_active': True,
+                    'delay': 0.0,
+                    'headers': {},
+                    'body': 'response_body'
+                }
+            ]
+        }
+
+
+    def test_match_route_not_found(self, client):
+        response = client.post('/internal/match_route', json={
+            'method': 'GET',
+            'path': '/path',
+        })
+
+        assert response.status_code == 404
+        assert response.json == {
+            'error': 'Not Found',
+            'message': 'No route was matched.'
+        }
+
+    def test_call_route_authentication_error(self, client):
+        response = client.post('/internal/routes', json={
+            'id': 'route_id',
+            'path': '/path',
+            'auth': {
+                'method': 'hmac',
+                'key': 'secret_key'
+            },
+            'responses': [
+                {
+                    'id': 'response_id',
+                    'body': 'response_body'
+                }
+            ]
+        })
+
+        response = client.get('/path', json={
+            'method': 'GET',
+            'path': '/path',
+        })
+
+        assert response.status_code == 401
+        assert response.json == {
+            'error': 'Unauthorized',
+            'message': 'HMAC authentication failed, URL is missing required parameter: "hmac_timestamp".'
         }
