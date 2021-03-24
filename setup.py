@@ -29,7 +29,7 @@ def main() -> None:
         url='https://github.com/JakubTesarek/trickster',
         author='Jakub Tesarek',
         author_email='jakub@tesarek.me',
-        license='unlicensed',
+        license='MIT',
         include_package_data=True,
         packages=['trickster'],
         install_requires=[
