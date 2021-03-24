@@ -5,15 +5,10 @@ nav_order: 1
 parent: Cookbook
 ---
 
-# Model
-{: .no_toc }
-
-This section describes entities that live inside Trickster, their properties and purpose.
-
 # Hello World!
 {: .no_toc }
 
-In this example we will
+In this example we will walk through:
 
 1. TOC
 {:toc}
@@ -36,7 +31,7 @@ When you run this program, it should print out `{'status': 'ok'}`. If it does, c
 Usually there are two types of problems that may occur.
 
 - If you see that `requests.exceptions.ConnectionError` was raised, there was a problem connecting to Trickster. Try to restart it. Check that you don't have a typo in the url and there's nothing blocking port 5000.
-- If you see `AssertionError`, it probably means that Trickster didn't return http code 200. If this happens, `r.json` contains [Error object](/trickster/api/model.html#error) with details about the problem.
+- If you see `AssertionError`, it probably means that Trickster didn't return http code 200. If this happens, `r.json` contains [Error object](/trickster/api/responses#error-response) with details about the problem.
 
 
 ## Create and call a Route

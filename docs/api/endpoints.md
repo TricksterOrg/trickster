@@ -29,7 +29,7 @@ Single [Route object](/trickster/api/model.html#route). Payload is validated usi
 {: .no_toc }
 
 On success returns `200 OK`, body contains the newly created [Route object](/trickster/api/model.html#route).
-Otherwise returns an [error response](/trickster/api/response-codes).
+Otherwise returns an [error response](/trickster/api/responses.html#error-response).
 
 
 ### `PUT /internal/routes/<route_id:str>`
@@ -51,7 +51,7 @@ Single [Route object](/trickster/api/model.html#route). Payload is validated usi
 ##### Response
 {: .no_toc }
 
-If the Route was found and successfully modified, returns `200 OK`. Body contains the newly configured [Route objects](/trickster/api/model.html#route). Otherwise returns an [error response](/trickster/api/response-codes).
+If the Route was found and successfully modified, returns `200 OK`. Body contains the newly configured [Route objects](/trickster/api/model.html#route). Otherwise returns an [error response](/trickster/api/responses.html).
 
 
 ### `GET /internal/routes`
@@ -70,7 +70,7 @@ Get a single Route by it's id.
 {: .no_toc }
 
 If the Route is found, returns `200 OK`. Body contains single configured [Route object](/trickster/api/model.html#route).
-Otherwise returns an [error response](/trickster/api/response-codes).
+Otherwise returns an [error response](/trickster/api/responses.html).
 
 
 ### `DELETE /internal/routes`
@@ -88,7 +88,7 @@ Remove previously created Route.
 ##### Response
 {: .no_toc }
 
-If the Route was found and successfully removed, returns `204 No Content` and empty body. Otherwise returns an [error response](/trickster/api/response-codes).
+If the Route was found and successfully removed, returns `204 No Content` and empty body. Otherwise returns an [error response](/trickster/api/responses.html).
 
 
 ## Responses
@@ -99,7 +99,7 @@ Get list of all Responses from single Route.
 ##### Response
 {: .no_toc }
 
-If the specifies Route was found, it returns `200 OK` and list of [Response objects](/trickster/api/model.html#response). Otherwise returns an [error response](/trickster/api/response-codes).
+If the specifies Route was found, it returns `200 OK` and list of [Response objects](/trickster/api/model.html#response). Otherwise returns an [error response](/trickster/api/responses.html).
 
 
 ### `GET /internal/routes/<string:route_id>/responses/<string:response_id>`
@@ -110,7 +110,7 @@ Use this endpoint if you previously configured a Route with Responses and you wa
 ##### Response
 {: .no_toc }
 
-If the Route and Response was found, it returns `200 OK` and the corresponding [Response object](/trickster/api/model.html#response). Otherwise returns an [error response](/trickster/api/response-codes).
+If the Route and Response was found, it returns `200 OK` and the corresponding [Response object](/trickster/api/model.html#response). Otherwise returns an [error response](/trickster/api/responses.html).
 
 
 ## Utility Endpoints
@@ -140,4 +140,4 @@ Single [Request object](/trickster/api/model.html#request). Payload is validated
 ##### Response
 {: .no_toc }
 
-If the Request was matched by any of the configured Routes it returns `200 OK` and the corresponding [Route object](/trickster/api/model.html#route). Otherwise returns an [error response](/trickster/api/response-codes).
+If the Request was matched by any of the configured Routes it returns `200 OK` and the corresponding [Route object](/trickster/api/model.html#route). Otherwise returns an [error response](/trickster/api/responses.html).
