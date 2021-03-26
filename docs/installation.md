@@ -4,7 +4,6 @@ layout: default
 nav_order: 1
 ---
 
-
 # Installation
 {: .no_toc }
 
@@ -36,6 +35,6 @@ Trickster provides [docker image](https://hub.docker.com/repository/docker/tesar
 `docker pull tesarekjakub/trickster:latest`
 
 To start the container, type:
-`docker run -p 5000:5000 tesarekjakub/trickster`
+`docker run -p 8080:8080 tesarekjakub/trickster`
 
 https://hub.docker.com/repository/docker/tesarekjakub/trickster

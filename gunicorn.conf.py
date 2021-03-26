@@ -1,6 +1,8 @@
 """Configuration for gunicorn worker."""
 
-bind = '0.0.0.0:5000'
+from trickster.config import Config
+
+bind = f'0.0.0.0:{Config.DEFAULT_PORT}'
 workers = 4
 
 timeout = 90

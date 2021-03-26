@@ -1,11 +1,17 @@
 import pytest
 
 from trickster.api_app import ApiApp
+from trickster.config import Config
 
 
 @pytest.fixture
-def app():
-    return ApiApp()
+def config():
+    return Config()
+
+
+@pytest.fixture
+def app(config):
+    return ApiApp(config)
 
 
 @pytest.fixture

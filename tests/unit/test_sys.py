@@ -1,6 +1,8 @@
+import os
+
 import pytest
 
-from trickster.sys import remove_file, multi_glob
+from trickster.sys import remove_file, multi_glob, get_env
 
 
 @pytest.mark.unit
@@ -15,7 +17,6 @@ class TestFileManipulation:
         remove_file(directory)
         assert not directory.exists()
 
-
     def test_glob_matches_only_selected_files(self, tmpdir):
         directory = tmpdir.mkdir('test_directory')
         file1 = directory.join('match1.file').ensure()
@@ -28,3 +29,12 @@ class TestFileManipulation:
             f'{directory}/match1.file',
             f'{directory}/match2.file'
         ]
+
+@pytest.mark.unit
+class TestEnvironment:
+    def test_get_env_variable(self, monkeypatch):
+        monkeypatch.setenv('VARIABLE', 'VALUE')
+        assert get_env('VARIABLE') == 'VALUE'
+
+    def test_get_env_variable_not_present(self, monkeypatch):
+        assert get_env('VARIABLE') is None

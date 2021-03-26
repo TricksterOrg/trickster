@@ -27,7 +27,7 @@ We don't specify http method which means that Trickster will use `GET` as defaul
 ```python
 import requests
 
-response = requests.post('http://localhost:5000/internal/routes', json={
+response = requests.post('http://localhost:8080/internal/routes', json={
     'path': '/login',
     'responses': [{
         'headers': {
@@ -44,7 +44,7 @@ response = requests.post('http://localhost:5000/internal/routes', json={
 })
 ```
 
-After you run this code, you can open in [http://localhost:5000/login](http://localhost:5000/login) in browser and should see the login form.
+After you run this code, you can open in [http://localhost:8080/login](http://localhost:8080/login) in browser and should see the login form.
 
 You can try to submit it but you'll notice you get an error. That's because we didn't create a Route that would handle the form yet.
 
@@ -63,7 +63,7 @@ Let's create new Route that does all 3 things.
 ```python
 import requests
 
-response = requests.post('http://localhost:5000/internal/routes', json={
+response = requests.post('http://localhost:8080/internal/routes', json={
     'path': '/login',
     'method': 'POST',
     'auth': {
@@ -106,7 +106,7 @@ In previous steps we create two Routes that handle login form. Now we'll create 
 ```python
 import requests
 
-response = requests.post('http://localhost:5000/internal/routes', json={
+response = requests.post('http://localhost:8080/internal/routes', json={
     'path': '/admin',
     'auth': {
         'method': 'cookie'
@@ -128,7 +128,7 @@ response = requests.post('http://localhost:5000/internal/routes', json={
 
 Here we used a different authentication method. The `cookie` method looks for a cookie and checks if it has the correct value. In this case we look for the session we set in previous Route.
 
-You can now test the login in your browser. Open [http://localhost:5000/login](http://localhost:5000/login), fill in the credentials and click on `login`. You should be redirected to the secure [admin page](http://localhost:5000/login).
+You can now test the login in your browser. Open [http://localhost:8080/login](http://localhost:8080/login), fill in the credentials and click on `login`. You should be redirected to the secure [admin page](http://localhost:8080/login).
 
 
 ## Enable logout
@@ -137,7 +137,7 @@ To finish this login workflow, we'll add handler that will log the user out. At 
 ```python
 import requests
 
-response = requests.post('http://localhost:5000/internal/routes', json={
+response = requests.post('http://localhost:8080/internal/routes', json={
     'path': '/logout',
     'responses': [{
         'status': 301,
@@ -150,4 +150,4 @@ response = requests.post('http://localhost:5000/internal/routes', json={
 })
 ```
 
-This last Route is the simplest from all that we created today. It deletes the `session` cookie so the user is no longer authenticated and then redirects him back to [login page](http://localhost:5000/login).
+This last Route is the simplest from all that we created today. It deletes the `session` cookie so the user is no longer authenticated and then redirects him back to [login page](http://localhost:8080/login).

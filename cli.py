@@ -4,7 +4,8 @@ import subprocess
 
 import click
 
-from trickster.api_app import ApiApp, INTERNAL_PREFIX, PORT
+from trickster.api_app import ApiApp
+from trickster.config import Config
 from trickster.sys import multi_glob, remove_file
 
 
@@ -40,12 +41,13 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option('-p', '--port', default=PORT, help='The port to bind to.')
-@click.option('-x', '--prefix', default=INTERNAL_PREFIX, help='Url prefix of internal endpoints.')
+@click.option('-p', '--port', default=Config.DEFAULT_PORT, help='The port to bind to.')
+@click.option('-x', '--prefix', default=Config.DEFAULT_INTERNAL_PREFIX, help='Url prefix of internal endpoints.')
 def run(port: int, prefix: str) -> None:
     """Start local Trickster app."""
-    app = ApiApp(prefix)
-    app.run(port=port)
+    config = Config(internal_prefix=prefix, port=port)
+    app = ApiApp(config)
+    app.run()
 
 
 @cli.command()

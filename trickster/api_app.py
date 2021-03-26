@@ -6,14 +6,11 @@ from typing import Any, Optional, Tuple
 
 from flask import Flask, jsonify
 
+from trickster.config import Config
 from trickster.endpoints import external_api, internal_api
 from trickster.routing import Router
 
 from werkzeug.exceptions import HTTPException
-
-
-PORT = 5000
-INTERNAL_PREFIX = '/internal'
 
 
 def http_error_handler(error: HTTPException) -> Tuple[Any, Optional[int]]:
@@ -27,9 +24,9 @@ def http_error_handler(error: HTTPException) -> Tuple[Any, Optional[int]]:
 class ApiApp(Flask):
     """Flask application handling API endpoints."""
 
-    def __init__(self, internal_prefix: str = INTERNAL_PREFIX) -> None:
+    def __init__(self, config: Config) -> None:
         super().__init__(__name__)
-        self.internal_prefix = internal_prefix
+        self.config.from_object(config)
         self.user_router = Router()
         self._register_handlers()
         self._register_blueprints()
@@ -40,5 +37,17 @@ class ApiApp(Flask):
 
     def _register_blueprints(self) -> None:
         """Register api endpoints."""
-        self.register_blueprint(internal_api, url_prefix=self.internal_prefix)
+        self.register_blueprint(internal_api, url_prefix=self.config['INTERNAL_PREFIX'])
         self.register_blueprint(external_api, url_prefix='')
+
+    def run(self) -> None:  # type: ignore # pragma: no cover
+        """Start app.
+
+        Run doesn't provide the full list of options of Flask on purpose.
+        It violates the Liskov Substitution Principle. But this method is not
+        intended for production use. It's used only for a local run using custom
+        Click API which accounts for that.
+
+        To change the configuration of the app, use `trickster.config.Config`.
+        """
+        super().run(port=self.config['PORT'])

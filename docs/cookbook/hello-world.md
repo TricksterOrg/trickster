@@ -21,7 +21,7 @@ Create python file or run this code from console:
 ```python
 import requests
 
-r = requests.get('http://localhost:5000/internal/health')
+r = requests.get('http://localhost:8080/internal/health')
 print(r.json)
 assert r.status_code == 200
 ```
@@ -30,7 +30,7 @@ When you run this program, it should print out `{'status': 'ok'}`. If it does, c
 
 Usually there are two types of problems that may occur.
 
-- If you see that `requests.exceptions.ConnectionError` was raised, there was a problem connecting to Trickster. Try to restart it. Check that you don't have a typo in the url and there's nothing blocking port 5000.
+- If you see that `requests.exceptions.ConnectionError` was raised, there was a problem connecting to Trickster. Try to restart it. Check that you don't have a typo in the url and there's nothing blocking port 8080.
 - If you see `AssertionError`, it probably means that Trickster didn't return http code 200. If this happens, `r.json` contains [Error object](/trickster/api/responses#error-response) with details about the problem.
 
 
@@ -40,7 +40,7 @@ Let's create our first route and call it. We will call url `/hello_world` with t
 ```python
 import requests
 
-r = requests.get('http://localhost:5000/hello_world')
+r = requests.get('http://localhost:8080/hello_world')
 print(r.json)
 ```
 
@@ -58,7 +58,7 @@ We need to tell Trickster that we want him to resolve this url and what it shoul
 ```python
 import requests
 
-r = requests.post('http://localhost:5000/internal/routes', json={
+r = requests.post('http://localhost:8080/internal/routes', json={
     'path': '/hello_world',
     'responses': [
         {'body': 'Hello World!'}
@@ -71,7 +71,7 @@ This creates new Route that will match any GET request on path `/hello_world` an
 ```python
 import requests
 
-r = requests.get('http://localhost:5000/internal/routes')
+r = requests.get('http://localhost:8080/internal/routes')
 print(r.json)
 ```
 You should get something like this:
@@ -110,7 +110,7 @@ Now you can finally call the `/hello_world` url:
 ```python
 import requests
 
-r = requests.get('http://localhost:5000/hello_world')
+r = requests.get('http://localhost:8080/hello_world')
 print(r.text)
 ```
 

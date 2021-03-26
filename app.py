@@ -1,9 +1,7 @@
 """Initialization of API app."""
 
-import logging
-
 from trickster.api_app import ApiApp
+from trickster.config import Config
 
 
-logger = logging.getLogger()
-app = ApiApp()
+app = ApiApp(Config())

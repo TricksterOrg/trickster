@@ -3,7 +3,7 @@
 import glob
 import os
 import shutil
-from typing import Iterator
+from typing import Iterator, Optional
 
 
 def remove_file(file_path: str) -> None:
@@ -19,3 +19,8 @@ def multi_glob(*patterns: str) -> Iterator[str]:
     for pattern in patterns:
         for file_path in glob.glob(pattern):
             yield file_path
+
+
+def get_env(variable: str) -> Optional[str]:
+    """Get environment variable or None."""
+    return os.environ.get(variable, None)
