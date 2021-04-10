@@ -302,9 +302,12 @@ class Router:
     def __init__(self) -> None:
         self.reset()
 
-    def reset(self) -> None:
-        """Remove all custom routes."""
+    def reset(self, routes: Optional[List[Dict[str, Any]]] = None) -> None:
+        """Replace all custom routes."""
         self.routes: IdList[Route] = IdList()
+        if routes:
+            for route in routes:
+                self.add_route(route)
 
     def _generate_route_id(self) -> str:
         """Generate route id."""

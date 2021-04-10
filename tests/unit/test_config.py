@@ -1,3 +1,6 @@
+from pathlib import Path
+import json
+
 import pytest
 
 from trickster.config import Config
@@ -40,6 +43,52 @@ class TestConfig:
         monkeypatch.setenv('TRICKSTER_INTERNAL_PREFIX', '/test')
         config = Config(internal_prefix='/api')
         assert config.INTERNAL_PREFIX == '/api'
+
+    def test_routes_path_from_env(self, monkeypatch):
+        monkeypatch.setenv('TRICKSTER_ROUTES', '/test.json')
+        config = Config()
+        assert config.ROUTES_PATH == Path('/test.json')
+
+    def test_default_routes_path(self):
+        config = Config()
+        assert config.ROUTES_PATH is None
+
+    def test_user_defined_routes_path(self):
+        config = Config(routes_path='/path.json')
+        assert config.ROUTES_PATH == Path('/path.json')
+
+    def test_user_defined_routes_path_takes_precedence(self, monkeypatch):
+        monkeypatch.setenv('TRICKSTER_ROUTES', '/test1.json')
+        config = Config(routes_path='/test2.json')
+        assert config.ROUTES_PATH == Path('/test2.json')
+
+    def test_default_routes_empty(self):
+        config = Config()
+        assert config.DEFAULT_ROUTES == []
+
+    def test_default_routes(self, tmpdir):
+        routes = [
+            {
+                "path": "/route1",
+                "responses": [
+                    {
+                        "body": "response1"
+                    }
+                ]
+            },
+            {
+                "path": "/route2",
+                "responses": [
+                    {
+                        "body": "response2"
+                    }
+                ]
+            }
+        ]
+        routes_file = tmpdir.join('test.json')
+        routes_file.write(json.dumps(routes))
+        config = Config(routes_path=routes_file)
+        assert config.DEFAULT_ROUTES == routes
 
     def test_coalesce(self):
         config = Config()

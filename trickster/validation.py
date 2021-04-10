@@ -24,14 +24,19 @@ def request_schema(schema_name: str) -> Callable:
         def request_schema_wrapper(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             try:
                 payload = flask.request.get_json()
-                schema_path = get_schema_path(schema_name)
-                validator = compile_json_schema(schema_path)
-                validator(payload)
+                validate_json(payload, schema_name)
                 return func(*args, **kwargs)
             except fastjsonschema.JsonSchemaException as e:
                 flask.abort(400, e.message)
         return request_schema_wrapper
     return request_schema_decorator
+
+
+def validate_json(json_data: Any, schema_name: str) -> None:
+    """Validate json data with given schema."""
+    schema_path = get_schema_path(schema_name)
+    validator = compile_json_schema(schema_path)
+    validator(json_data)
 
 
 @functools.lru_cache

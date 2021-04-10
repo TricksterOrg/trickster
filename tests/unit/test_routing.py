@@ -697,3 +697,18 @@ class TestRouter:
                 }
             ]
         }, 'id1')
+
+    def test_reset_router_with_default_routes(self):
+        router = Router()
+        router.reset([
+            {
+                "path": "/minimal_endpoint",
+                "responses": [
+                    {
+                        "body": "response"
+                    }
+                ]
+            }
+        ])
+        
+        assert len(router.routes) == 1

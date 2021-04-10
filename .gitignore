@@ -16,6 +16,7 @@ dist
 # Project files
 .idea
 .vscode
+*.swp
 
 # Pytest
 .pytest_cache/

@@ -30,6 +30,11 @@ class ApiApp(Flask):
         self.user_router = Router()
         self._register_handlers()
         self._register_blueprints()
+        self._load_routes()
+
+    def _load_routes(self) -> None:
+        """Load configured default routes."""
+        self.user_router.reset(self.config['DEFAULT_ROUTES'])
 
     def _register_handlers(self) -> None:
         """Register error page handlers."""

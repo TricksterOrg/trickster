@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Added changelog.
+- Added option to [configure default routes](https://jakubtesarek.github.io/trickster/configuration.html#default-routes).
 
 ### Fixed
 - Increment route and response usage counter before applying delay.

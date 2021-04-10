@@ -46,7 +46,7 @@ You can configure the internal prefix using the `-x/--prefix` argument, eg. `tri
 Changing the internal prefix using the environment variable `TRICKSTER_INTERNAL_PREFIX` is also possible but not recommended. If you set both the environment variable and CLI argument, the CLI argument takes precedence.
 
 ### Docker
-If you run Trickster in a docker container, you can change the prefix of internal endpoints by setting the `TRICKSTER_INTERNAL_PREFIX` using [any method supported by docker](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file). Eg. `docker run -p 8080:8080 -r TRICKSTER_INTERNAL_PREFIX=/api tesarekjakub/trickster`
+If you run Trickster in a docker container, you can change the prefix of internal endpoints by setting the `TRICKSTER_INTERNAL_PREFIX` using [any method supported by docker](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file). Eg. `docker run -p 8080:8080 -e TRICKSTER_INTERNAL_PREFIX=/api tesarekjakub/trickster`
 
 ### Docker-compose
 To set internal prefix in docker-compose, use the `environment` directive:
@@ -57,4 +57,49 @@ mock-service:
     ports: ["8080:8080"]
     environment:
       TRICKSTER_INTERNAL_PREFIX: "/api"
+```
+
+## Default routes
+Trickster allows you to set defalt routes that will be loaded when in starts. You may provide them as a json file containing a list of Routes. The format of Route is equal to [POST Route endpoint](/trickster/api/endpoints.html#post-internalroutes).
+
+```json
+[
+    {
+	"path": "/endpoint1",
+	"responses": [
+	    {
+	        "body": "response1"
+	    }
+        ]
+
+    },
+    {
+        "path": "/endpoint2",
+        "responses": [
+            {
+                "body": "response2"
+            }
+        ]
+    }
+]
+```
+
+### CLI
+You can configure internal routes by providing path to json file using the `-r/--routes` argument, eg. `trickster run -r routes.json`.
+
+### Docker
+If you use docker, you may provide path to default routes using the environmen variable `TRICKSTER_ROUTES`. You also have to mount the file (or directory containing the file) inside the container.
+
+Eg.  `docker run --mount type=bind,source="$(pwd)"/test.json,target=/routes.json,readonly -e TRICKSTER_ROUTES=/routes.json`
+
+### Docker-compose
+
+```yml
+mock-service:
+    image: tesarekjakub/trickster:latest
+    ports: ["8080:8080"]
+    environment:
+      TRICKSTER_ROUTES: "/routes.json"
+    volumes:
+      - ${PWD}/routes.json:/routes.json
 ```

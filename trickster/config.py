@@ -1,8 +1,11 @@
 """Functionality for handling configuration."""
 
-from typing import Any, Optional
+import json
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from trickster.sys import get_env
+from trickster.validation import validate_json
 
 
 class Config:
@@ -20,9 +23,15 @@ class Config:
     DEFAULT_INTERNAL_PREFIX = '/internal'
     DEFAULT_PORT = 8080
 
-    def __init__(self, internal_prefix: Optional[str] = None, port: Optional[int] = None):
+    def __init__(
+        self,
+        internal_prefix: Optional[str] = None,
+        port: Optional[int] = None,
+        routes_path: Optional[str] = None
+    ):
         self._internal_prefix = internal_prefix
         self._port = port
+        self._routes_path = routes_path
 
     def _coalesce(self, *values: Any) -> Any:
         """Return first value from all arguments that doesn't evaluate to None."""
@@ -47,3 +56,25 @@ class Config:
             get_env('TRICKSTER_PORT'),
             self.DEFAULT_PORT
         ))
+
+    @property
+    def ROUTES_PATH(self) -> Optional[Path]:  # noqa: N802
+        """Get path to json file containing default routes."""
+        if str_path := self._coalesce(self._routes_path, get_env('TRICKSTER_ROUTES')):
+            return Path(str_path)
+        return None
+
+    @property
+    def DEFAULT_ROUTES(self) -> List[Dict[str, Any]]:
+        """Get default routes."""
+        if path := self.ROUTES_PATH:
+            with path.open() as json_file:
+                routes = json.load(json_file)
+                self._validate_routes(routes)
+                return routes
+        return []
+
+    def _validate_routes(self, routes: List[Dict[str, Any]]) -> None:
+        """Validate default routes."""
+        for route in routes:
+            validate_json(route, 'route.schema.json')
