@@ -5,7 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) since version 2.0.0.
 
 ## [Unreleased]
+
+## [2.0.0] - 2021-04-10
 ### Added
+- Prefix of internal endpoints and port [can be configured using both CLI and docker](/trickster/configuration.html).
 - Added changelog.
 - Added option to [configure default routes](https://jakubtesarek.github.io/trickster/configuration.html#default-routes).
 - Added endpoint to [reset all routes to default](/trickster/api/endpoints.html#post-internalreset)
