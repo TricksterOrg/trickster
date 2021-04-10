@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Added changelog.
 - Added option to [configure default routes](https://jakubtesarek.github.io/trickster/configuration.html#default-routes).
+- Added endpoint to [reset all routes to default](/trickster/api/endpoints.html#post-internalreset)
 
 ### Fixed
 - Increment route and response usage counter before applying delay.

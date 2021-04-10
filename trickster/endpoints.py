@@ -20,6 +20,13 @@ def health() -> Response:
     return jsonify({'status': 'ok'})
 
 
+@internal_api.route('/reset', methods=['POST'])
+def reset() -> Response:
+    """Reset Routes to default."""
+    current_app.load_routes()
+    return make_response('', 204)
+
+
 @internal_api.route('/routes', methods=['GET'])
 def get_all_routes() -> Response:
     """Get list of configured Routes."""

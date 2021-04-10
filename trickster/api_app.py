@@ -28,11 +28,11 @@ class ApiApp(Flask):
         super().__init__(__name__)
         self.config.from_object(config)
         self.user_router = Router()
+        self.load_routes()
         self._register_handlers()
         self._register_blueprints()
-        self._load_routes()
 
-    def _load_routes(self) -> None:
+    def load_routes(self) -> None:
         """Load configured default routes."""
         self.user_router.reset(self.config['DEFAULT_ROUTES'])
 

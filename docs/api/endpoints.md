@@ -141,3 +141,17 @@ Single [Request object](/trickster/api/model.html#request). Payload is validated
 {: .no_toc }
 
 If the Request was matched by any of the configured Routes it returns `200 OK` and the corresponding [Route object](/trickster/api/model.html#route). Otherwise returns an [error response](/trickster/api/responses.html).
+
+
+### `POST /internal/reset`
+Reset all Routes.
+
+Difference between `POST /internal/reset` and [`DELETE /internal/routes`](/trickster/api/endpoints.html#delete-internalroutes): 
+
+- `DELETE /internal/routes` removes all defined routes.
+- `POST /intenal/reset` sets Trickster to the state in which it started. If it started without [default Routes](/trickster/configuration.html#default-routes), it will behave exactly like `DELETE /internal/routes`. But if you started Trickster with default Routes, it will first remove all Routes and then re-load them from the provided JSON file.
+
+#### Response
+{: .no_toc }
+
+Returns `204 No Content`. Body is empty.
