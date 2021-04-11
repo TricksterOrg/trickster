@@ -5,9 +5,9 @@ import pytest
 import hmac
 from werkzeug.exceptions import BadRequest
 
-from trickster import AuthenticationError, RouteConfigurationError
-from trickster.auth import NoAuth, TokenAuth, BasicAuth, FormAuth, CookieAuth, HmacAuth, Auth
-from trickster.input import IncomingTestRequest
+from trickster.routing import AuthenticationError, RouteConfigurationError
+from trickster.routing.auth import NoAuth, TokenAuth, BasicAuth, FormAuth, CookieAuth, HmacAuth, Auth
+from trickster.routing.input import IncomingTestRequest
 
 
 @pytest.mark.unit

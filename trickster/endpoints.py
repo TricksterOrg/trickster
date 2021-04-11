@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from flask import Blueprint, Response, abort, current_app, jsonify, make_response, request
 
-from trickster import RouteConfigurationError
-from trickster.auth import AuthenticationError
-from trickster.input import HTTP_METHODS, IncomingFlaskRequest, IncomingTestRequest
+from trickster.routing import RouteConfigurationError
+from trickster.routing.auth import AuthenticationError
+from trickster.routing.input import HTTP_METHODS, IncomingFlaskRequest, IncomingTestRequest
 from trickster.validation import request_schema
 
 

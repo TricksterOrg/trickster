@@ -8,7 +8,7 @@ from flask import Flask, jsonify
 
 from trickster.config import Config
 from trickster.endpoints import external_api, internal_api
-from trickster.routing import Router
+from trickster.routing.router import Router
 
 from werkzeug.exceptions import HTTPException
 

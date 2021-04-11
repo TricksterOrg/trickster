@@ -2,7 +2,7 @@ import pytest
 
 import flask
 
-from trickster.input import IncomingTestRequest, IncomingFlaskRequest, HTTP_METHODS
+from trickster.routing.input import IncomingTestRequest, IncomingFlaskRequest, HTTP_METHODS
 
 
 @pytest.mark.unit

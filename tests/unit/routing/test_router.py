@@ -3,11 +3,10 @@ import re
 import pytest
 import flask
 
-from trickster import DuplicateRouteError, MissingRouteError
-from trickster.auth import NoAuth
-from trickster import RouteConfigurationError
-from trickster.routing import Delay, RouteResponse, ResponseSelectionStrategy, Route, Router
-from trickster.input import IncomingTestRequest
+from trickster.routing import DuplicateRouteError, MissingRouteError, RouteConfigurationError
+from trickster.routing.auth import NoAuth
+from trickster.routing.router import Delay, Response, RouteResponse, ResponseSelectionStrategy, Route, Router
+from trickster.routing.input import IncomingTestRequest
 
 
 @pytest.mark.unit
@@ -114,7 +113,7 @@ class TestResponse:
         assert response.headers == {}
 
     def test_use(self):
-        response = RouteResponse('', Delay())
+        response = Response('', Delay())
         assert response.used_count == 0
         response.use()
         assert response.used_count == 1
@@ -171,7 +170,7 @@ class TestResponse:
 
 
 @pytest.mark.unit
-class TestResponse:
+class TestRouteResponse:
     def test_deserialize_complete(self):
         response = RouteResponse.deserialize({
             'id': 'id',

@@ -12,8 +12,8 @@ from typing import Any, Dict, List, Optional, Tuple, Type
 
 import basicauth
 
-from trickster import AuthenticationError, RouteConfigurationError
-from trickster.input import IncomingRequest
+from trickster.routing import AuthenticationError, RouteConfigurationError
+from trickster.routing.input import IncomingRequest
 
 
 class Auth(abc.ABC):

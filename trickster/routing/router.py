@@ -12,10 +12,10 @@ from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar, Union
 
 import flask
 
-from trickster import DuplicateRouteError, MissingRouteError, RouteConfigurationError
-from trickster.auth import Auth
 from trickster.collections import IdItem, IdList
-from trickster.input import IncomingRequest
+from trickster.routing import DuplicateRouteError, MissingRouteError, RouteConfigurationError
+from trickster.routing.auth import Auth
+from trickster.routing.input import IncomingRequest
 
 
 class Delay:
