@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2021-04-11
+### Fixed
+- Hotfix: CLI mode invalid argument error fixed
+
 ## [2.0.0] - 2021-04-10
 ### Added
 - Prefix of internal endpoints and port [can be configured using both CLI and docker](/trickster/configuration.html).

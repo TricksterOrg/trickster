@@ -44,9 +44,9 @@ def cli() -> None:
 @click.option('-p', '--port', default=Config.DEFAULT_PORT, help='The port to bind to.')
 @click.option('-x', '--prefix', default=Config.DEFAULT_INTERNAL_PREFIX, help='Url prefix of internal endpoints.')
 @click.option('-r', '--routes', type=click.Path(exists=True), help='Path to json file with default routes.')
-def run(port: int, prefix: str, default_routes: str) -> None:
+def run(port: int, prefix: str, routes: str) -> None:
     """Start local Trickster app."""
-    config = Config(internal_prefix=prefix, port=port, routes_path=default_routes)
+    config = Config(internal_prefix=prefix, port=port, routes_path=routes)
     app = ApiApp(config)
     app.run()
 
