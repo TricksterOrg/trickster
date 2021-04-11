@@ -8,11 +8,11 @@ import hashlib
 import hmac
 import re
 import urllib.parse
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, Iterator, Optional, Tuple, Type
 
 import basicauth
 
-from trickster.routing import AuthenticationError, RouteConfigurationError
+from trickster.routing import AuthenticationError, Delay, Response, RouteConfigurationError
 from trickster.routing.input import IncomingRequest
 
 
@@ -21,23 +21,29 @@ class Auth(abc.ABC):
 
     method: Optional[str] = None
 
-    def __init__(self, *args: List, **kwargs: Dict):  # pragma: no cover
+    def __init__(self, *args: Any, **kwargs: Any):  # pragma: no cover
+        # Exists just make to make mypy happy.
         pass
 
     @abc.abstractmethod
     def authenticate(self, request: IncomingRequest) -> None:
         """Check if IncomingRequest contains valid authentication, raise exception if not."""
 
-    def serialize(self) -> Dict[str, Any]:
+    @abc.abstractmethod
+    def serialize(self) -> Optional[Dict[str, Any]]:
         """Convert Auth to json value."""
-        return {
-            'method': self.method
-        }
+
+    @classmethod
+    def _get_subclasses(cls) -> Iterator[Type[Auth]]:
+        """Get all (direct and indirect) subclasses of this class."""
+        for subclass in cls.__subclasses__():
+            yield from subclass._get_subclasses()
+            yield subclass
 
     @classmethod
     def _find_implementation(cls, method: str) -> Type[Auth]:
         """Find a subclass implementing given auth method."""
-        for subclass in cls.__subclasses__():
+        for subclass in cls._get_subclasses():
             if subclass.method == method:
                 return subclass
         raise RouteConfigurationError(f'Implementation of "{method}"" authentication method not found.')
@@ -49,14 +55,16 @@ class Auth(abc.ABC):
             return NoAuth()
 
         if 'method' in data:
-            method = data.pop('method')
-            implementation = cls._find_implementation(method)
+            implementation = cls._find_implementation(data['method'])
+            if issubclass(implementation, AuthWithResponse):
+                return AuthWithResponse.deserialize(data)
+            data.pop('method')
             return implementation(**data)
         else:
             raise RouteConfigurationError('Missing field "method" of Auth.')
 
 
-class NoAuth(abc.ABC):
+class NoAuth(Auth):
     """Placeholder authentication method. Doesn't perform authentication."""
 
     method = None
@@ -70,12 +78,45 @@ class NoAuth(abc.ABC):
         return None
 
 
-class TokenAuth(Auth):
+class AuthWithResponse(Auth, abc.ABC):
+    """Authentication method with configured error response."""
+
+    def __init__(self, unauthorized_response: Response):
+        self.unauthorized_response = unauthorized_response
+
+    def serialize(self) -> Dict[str, Any]:
+        """Convert Auth to json value."""
+        return {
+            'method': self.method,
+            'unauthorized_response': self.unauthorized_response.serialize()
+        }
+
+    @classmethod
+    def deserialize(cls, data: Dict[str, Any]) -> Auth:
+        """Convert json value to Auth."""
+        if 'method' in data:
+            implementation = cls._find_implementation(data['method'])
+            data.pop('method')
+            if response_data := data.pop('unauthorized_response', None):
+                response = Response.deserialize(response_data)
+            else:
+                response = Response(
+                    {'error': 'Unauthorized', 'message': 'Authentication failed.'},
+                    Delay(0.0),
+                    status=401
+                )
+            return implementation(response, **data)
+        else:
+            raise RouteConfigurationError('Missing field "method" of Auth.')
+
+
+class TokenAuth(AuthWithResponse):
     """Authentication using http token in header."""
 
     method = 'token'
 
-    def __init__(self, token: str):
+    def __init__(self, unauthorized_response: Response, token: str):
+        super().__init__(unauthorized_response)
         self.token = token
 
     def _get_header(self, request: IncomingRequest) -> str:
@@ -109,12 +150,13 @@ class TokenAuth(Auth):
         return data
 
 
-class BasicAuth(Auth):
+class BasicAuth(AuthWithResponse):
     """Authentication using username and password in http header."""
 
     method = 'basic'
 
-    def __init__(self, username: str, password: str):
+    def __init__(self, unauthorized_response: Response, username: str, password: str):
+        super().__init__(unauthorized_response)
         self.username = username
         self.password = password
 
@@ -151,12 +193,13 @@ class BasicAuth(Auth):
         return data
 
 
-class HmacAuth(Auth):
+class HmacAuth(AuthWithResponse):
     """Authentication using hmac signature in url."""
 
     method = 'hmac'
 
-    def __init__(self, key: str):
+    def __init__(self, unauthorized_response: Response, key: str):
+        super().__init__(unauthorized_response)
         self.key = key
         self.past_tolerance = 3600
         self.future_tolerance = 5
@@ -226,12 +269,13 @@ class HmacAuth(Auth):
         return data
 
 
-class FormAuth(Auth):
+class FormAuth(AuthWithResponse):
     """Authentication using form data."""
 
     method = 'form'
 
-    def __init__(self, fields: Dict[str, str]):
+    def __init__(self, unauthorized_response: Response, fields: Dict[str, str]):
+        super().__init__(unauthorized_response)
         self.fields = fields
 
     def _get_field(self, form: Dict[str, str], field: str) -> str:
@@ -258,12 +302,13 @@ class FormAuth(Auth):
         return data
 
 
-class CookieAuth(Auth):
+class CookieAuth(AuthWithResponse):
     """Authentication using http cookie."""
 
     method = 'cookie'
 
-    def __init__(self, name: str, value: str):
+    def __init__(self, unauthorized_response: Response, name: str, value: str):
+        super().__init__(unauthorized_response)
         self.name = name
         self.value = value
 

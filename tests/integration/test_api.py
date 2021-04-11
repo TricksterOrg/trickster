@@ -124,7 +124,17 @@ class TestApi:
             'auth': {
                 'method': 'basic',
                 'password': 'password',
-                'username': 'username'
+                'username': 'username',
+                'unauthorized_response': {
+                    'body': {
+                        'error': 'Unauthorized',
+                        'message': 'Authentication failed.'
+                    },
+                    'delay': 0.0,
+                    'headers': {},
+                    'status': 401,
+                    'used_count': 0
+                }
             },
             'responses': [
                 {

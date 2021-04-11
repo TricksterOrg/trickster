@@ -5,8 +5,8 @@ import pytest
 import hmac
 from werkzeug.exceptions import BadRequest
 
-from trickster.routing import AuthenticationError, RouteConfigurationError
-from trickster.routing.auth import NoAuth, TokenAuth, BasicAuth, FormAuth, CookieAuth, HmacAuth, Auth
+from trickster.routing import AuthenticationError, Delay, Response, RouteConfigurationError
+from trickster.routing.auth import NoAuth, TokenAuth, BasicAuth, FormAuth, CookieAuth, HmacAuth, Auth, AuthWithResponse
 from trickster.routing.input import IncomingTestRequest
 
 
@@ -20,12 +20,38 @@ class TestAuth:
         with pytest.raises(RouteConfigurationError):
             Auth.deserialize({'method': 'unknown'})
 
+    def test_deserialize(self):
+        auth = Auth.deserialize({'method': None})
+        assert isinstance(auth, NoAuth)
+
+@pytest.mark.unit
+class TestAuthWithResponse:
+    def test_deserialize_missing_method(self):
+        with pytest.raises(RouteConfigurationError):
+            AuthWithResponse.deserialize({})
+
+    def test_deserialize_unknown_type(self):
+        with pytest.raises(RouteConfigurationError):
+            AuthWithResponse.deserialize({'method': 'unknown'})
+
+    def test_deserialize_with_response(self):
+        auth = AuthWithResponse.deserialize({
+            'method': 'token',
+            'token': 'abcdefghi',
+            'unauthorized_response': {
+                'body': 'unauthorized'
+            }
+        })
+        assert isinstance(auth, TokenAuth)
+        assert auth.token == 'abcdefghi'
+        assert auth.unauthorized_response.body == 'unauthorized'
+
 
 @pytest.mark.unit
 class TestNoAuth:
     def test_serialize(self):
         auth = NoAuth()
-        auth.serialize() == None
+        assert auth.serialize() == None
 
     def test_deserialize(self):
         auth = Auth.deserialize(None)
@@ -44,10 +70,17 @@ class TestNoAuth:
 @pytest.mark.unit
 class TestTokenAuth:
     def test_serialize(self):
-        auth = TokenAuth('abcdefghi')
-        auth.serialize() == {
+        auth = TokenAuth(Response('', Delay()), 'abcdefghi')
+        assert auth.serialize() == {
             'method': 'token',
-            'token': 'abcdefghi'
+            'token': 'abcdefghi',
+            'unauthorized_response': {
+                'body': '',
+                'delay': 0.0,
+                'headers': {},
+                'status': 200,
+                'used_count': 0
+            }
         }
 
     def test_deserialize(self):
@@ -59,7 +92,7 @@ class TestTokenAuth:
         assert auth.token == 'abcdefghi'
 
     def test_authenticate(self):
-        auth = TokenAuth('abcdefghi')
+        auth = TokenAuth(Response('', Delay()), 'abcdefghi')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -69,7 +102,7 @@ class TestTokenAuth:
         auth.authenticate(request)
 
     def test_missing_auth_header(self):
-        auth = TokenAuth('abcdefghi')
+        auth = TokenAuth(Response('', Delay()), 'abcdefghi')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -79,7 +112,7 @@ class TestTokenAuth:
             auth.authenticate(request)
 
     def test_missing_invalid_auth_header(self):
-        auth = TokenAuth('abcdefghi')
+        auth = TokenAuth(Response('', Delay()), 'abcdefghi')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -90,7 +123,7 @@ class TestTokenAuth:
             auth.authenticate(request)
 
     def test_missing_bearer_token(self):
-        auth = TokenAuth('abcdefghi')
+        auth = TokenAuth(Response('', Delay()), 'abcdefghi')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -104,11 +137,18 @@ class TestTokenAuth:
 @pytest.mark.unit
 class TestBasicAuth:
     def test_serialize(self):
-        auth = BasicAuth('username', 'password')
-        auth.serialize() == {
+        auth = BasicAuth(Response('', Delay()), 'username', 'password')
+        assert auth.serialize() == {
             'method': 'basic',
             'username': 'username',
-            'password': 'password'
+            'password': 'password',
+            'unauthorized_response': {
+                'body': '',
+                'delay': 0.0,
+                'headers': {},
+                'status': 200,
+                'used_count': 0
+            }
         }
 
     def test_deserialize(self):
@@ -122,7 +162,7 @@ class TestBasicAuth:
         assert auth.password == 'password'
 
     def test_authenticate(self):
-        auth = BasicAuth('username', 'password')
+        auth = BasicAuth(Response('', Delay()), 'username', 'password')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -132,7 +172,7 @@ class TestBasicAuth:
         auth.authenticate(request)
 
     def test_invalid_username_and_password(self):
-        auth = BasicAuth('username', 'password')
+        auth = BasicAuth(Response('', Delay()), 'username', 'password')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -143,7 +183,7 @@ class TestBasicAuth:
             auth.authenticate(request)
 
     def test_missing_auth_header(self):
-        auth = BasicAuth('username', 'password')
+        auth = BasicAuth(Response('', Delay()), 'username', 'password')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -153,7 +193,7 @@ class TestBasicAuth:
             auth.authenticate(request)
 
     def test_invalid_auth_token(self):
-        auth = BasicAuth('username', 'password')
+        auth = BasicAuth(Response('', Delay()), 'username', 'password')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -167,15 +207,22 @@ class TestBasicAuth:
 @pytest.mark.unit
 class TestFormAuth:
     def test_serialize(self):
-        auth = FormAuth({
+        auth = FormAuth(Response('', Delay()), {
             'field1': 'value1',
             'field2': 'value2'
         })
-        auth.serialize() == {
-            'method': 'basic',
+        assert auth.serialize() == {
+            'method': 'form',
             'fields': {
                'field1': 'value1',
                 'field2': 'value2'
+            },
+            'unauthorized_response': {
+                'body': '',
+                'delay': 0.0,
+                'headers': {},
+                'status': 200,
+                'used_count': 0
             }
         }
 
@@ -194,7 +241,7 @@ class TestFormAuth:
         }
 
     def test_authenticate(self):
-        auth = FormAuth({
+        auth = FormAuth(Response('', Delay()), {
             'field1': 'value1',
             'field2': 'value2'
         })
@@ -210,7 +257,7 @@ class TestFormAuth:
         auth.authenticate(request)
 
     def test_missing_field(self):
-        auth = FormAuth({
+        auth = FormAuth(Response('', Delay()), {
             'field1': 'value1',
             'field2': 'value2'
         })
@@ -226,7 +273,7 @@ class TestFormAuth:
             auth.authenticate(request)
 
     def test_invalid_field_value(self):
-        auth = FormAuth({
+        auth = FormAuth(Response('', Delay()), {
             'field1': 'value1',
             'field2': 'value2'
         })
@@ -246,11 +293,18 @@ class TestFormAuth:
 @pytest.mark.unit
 class TestCookieAuth:
     def test_serialize(self):
-        auth = CookieAuth('name', 'value')
-        auth.serialize() == {
+        auth = CookieAuth(Response('', Delay()), 'name', 'value')
+        assert auth.serialize() == {
             'method': 'cookie',
             'name': 'name',
-            'value': 'value'
+            'value': 'value',
+            'unauthorized_response': {
+                'body': '',
+                'delay': 0.0,
+                'headers': {},
+                'status': 200,
+                'used_count': 0
+            }
         }
 
     def test_deserialize(self):
@@ -264,7 +318,7 @@ class TestCookieAuth:
         assert auth.value == 'value'
 
     def test_authenticate(self):
-        auth = CookieAuth('name', 'value')
+        auth = CookieAuth(Response('', Delay()), 'name', 'value')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -274,7 +328,7 @@ class TestCookieAuth:
         auth.authenticate(request)
 
     def test_missing_cookie(self):
-        auth = CookieAuth('name', 'value')
+        auth = CookieAuth(Response('', Delay()), 'name', 'value')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -284,7 +338,7 @@ class TestCookieAuth:
             auth.authenticate(request)
 
     def test_invalid_cookie_value(self):
-        auth = CookieAuth('name', 'value')
+        auth = CookieAuth(Response('', Delay()), 'name', 'value')
         request = IncomingTestRequest(
             base_url='http://localhost/',
             full_path='/test',
@@ -298,10 +352,17 @@ class TestCookieAuth:
 @pytest.mark.unit
 class TestHmacAuth:
     def test_serialize(self):
-        auth = HmacAuth('secret')
-        auth.serialize() == {
+        auth = HmacAuth(Response('', Delay()), 'secret')
+        assert auth.serialize() == {
             'method': 'hmac',
-            'key': 'secret'
+            'key': 'secret',
+            'unauthorized_response': {
+                'body': '',
+                'delay': 0.0,
+                'headers': {},
+                'status': 200,
+                'used_count': 0
+            }
         }
 
     def test_deserialize(self):
@@ -313,7 +374,7 @@ class TestHmacAuth:
         assert auth.key == 'secret'
 
     def test_authenticate(self):
-        auth = HmacAuth('secret')
+        auth = HmacAuth(Response('', Delay()), 'secret')
         ts = time.time()
         hash_maker = hmac.new('secret'.encode('utf-8'), digestmod=hashlib.sha1) 
         hash_maker.update(f'/test?hmac_timestamp={ts}'.encode('utf-8'))
@@ -326,7 +387,7 @@ class TestHmacAuth:
         auth.authenticate(request)
 
     def test_missing_timestamp(self):
-        auth = HmacAuth('secret')
+        auth = HmacAuth(Response('', Delay()), 'secret')
         ts = time.time()
         hash_maker = hmac.new('secret'.encode('utf-8'), digestmod=hashlib.sha1) 
         hash_maker.update(f'/test'.encode('utf-8'))
@@ -341,7 +402,7 @@ class TestHmacAuth:
             auth.authenticate(request)
 
     def test_missing_sign(self):
-        auth = HmacAuth('secret')
+        auth = HmacAuth(Response('', Delay()), 'secret')
         ts = time.time()
         request = IncomingTestRequest(
             base_url='http://localhost/',
@@ -353,7 +414,7 @@ class TestHmacAuth:
             auth.authenticate(request)
 
     def test_signature_in_past(self):
-        auth = HmacAuth('secret')
+        auth = HmacAuth(Response('', Delay()), 'secret')
         ts = 946684861  # 01/01/2020
         hash_maker = hmac.new('secret'.encode('utf-8'), digestmod=hashlib.sha1) 
         hash_maker.update(f'/test?hmac_timestamp={ts}'.encode('utf-8'))
@@ -368,7 +429,7 @@ class TestHmacAuth:
             auth.authenticate(request)
 
     def test_signature_in_future(self):
-        auth = HmacAuth('secret')
+        auth = HmacAuth(Response('', Delay()), 'secret')
         ts = 13569465661  # 01/01/2400
         hash_maker = hmac.new('secret'.encode('utf-8'), digestmod=hashlib.sha1) 
         hash_maker.update(f'/test?hmac_timestamp={ts}'.encode('utf-8'))
@@ -383,7 +444,7 @@ class TestHmacAuth:
             auth.authenticate(request)
 
     def test_invalid_sign(self):
-        auth = HmacAuth('secret')
+        auth = HmacAuth(Response('', Delay()), 'secret')
         ts = time.time()
         request = IncomingTestRequest(
             base_url='http://localhost/',
