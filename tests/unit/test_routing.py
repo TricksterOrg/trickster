@@ -6,7 +6,7 @@ import flask
 from trickster import DuplicateRouteError, MissingRouteError
 from trickster.auth import NoAuth
 from trickster import RouteConfigurationError
-from trickster.routing import Delay, Response, ResponseSelectionStrategy, Route, Router
+from trickster.routing import Delay, RouteResponse, ResponseSelectionStrategy, Route, Router
 from trickster.input import IncomingTestRequest
 
 
@@ -60,6 +60,120 @@ class TestDelay:
 class TestResponse:
     def test_deserialize_complete(self):
         response = Response.deserialize({
+            'status': 400,
+            'delay': [0.1, 0.2],
+            'headers': {
+                'content-type': 'application/json'
+            },
+            'body': {
+                'works': True
+            }
+        })
+
+        assert response.status == 400
+        assert isinstance(response.delay, Delay)
+        assert response.delay.min_delay == 0.1
+        assert response.delay.max_delay == 0.2
+        assert response.headers == {
+            'content-type': 'application/json'
+        }
+        assert response.body == {
+            'works': True
+        }
+
+    def test_deserialize_minimal(self):
+        response = Response.deserialize({
+            'body': '',
+        })
+        assert response.status == 200
+        assert isinstance(response.delay, Delay)
+        assert response.delay.min_delay == 0.0
+        assert response.delay.max_delay == 0.0
+        assert response.headers == {}
+        assert response.body == ''
+
+    @pytest.mark.parametrize('body', [{}, 1, True])
+    def test_add_automatic_json_header(self, body):
+        response = Response.deserialize({
+            'body': body
+        })
+        assert response.headers == {'content-type': 'application/json'}
+
+    @pytest.mark.parametrize('body', [{}, 1, True])
+    def test_doesnt_add_json_header_when_user_specifies_headers(self, body):
+        response = Response.deserialize({
+            'body': body,
+            'headers': {}
+        })
+        assert response.headers == {}
+
+    def test_doesnt_add_json_header_to_string(self):
+        response = Response.deserialize({
+            'body': 'string'
+        })
+        assert response.headers == {}
+
+    def test_use(self):
+        response = RouteResponse('', Delay())
+        assert response.used_count == 0
+        response.use()
+        assert response.used_count == 1
+
+    def test_wait(self, mocker):
+        response = Response('', Delay(1.0, 2.0))
+        sleep = mocker.patch('time.sleep')
+        response.wait()
+        sleep.assert_called_once()
+
+    def test_serialized_body_returns_strings_as_inserted(self):
+        response = Response('string', Delay())
+        response.serialized_body == 'string'
+
+    def test_serialized_body_returns_json_as_string(self):
+        response = Response('id', {'key': 'value'}, Delay())
+        response.serialized_body == '{"key": "value"}'
+
+    def test_serialize_deserialize_complete(self):
+        response = Response.deserialize({
+            'status': 400,
+            'delay': [0.1, 0.2],
+            'headers': {
+                'content-type': 'application/json'
+            },
+            'body': {
+                'works': True
+            }
+        })
+
+        assert response.serialize() == {
+            'status': 400,
+            'delay': [0.1, 0.2],
+            'used_count': 0,
+            'headers': {
+                'content-type': 'application/json'
+            },
+            'body': {
+                'works': True
+            }
+        }
+
+    def test_as_flask_response(self):
+        response = Response(
+            {'key': 'value'}, Delay(), headers={'header': 'header_value'}
+        )
+
+        flask_response = response.as_flask_response()
+        assert isinstance(flask_response, flask.Response)
+        assert flask_response.status_code == 200
+        assert flask_response.data == b'{"key": "value"}'
+        assert flask_response.headers['header'] == 'header_value'
+
+
+
+@pytest.mark.unit
+class TestResponse:
+    def test_deserialize_complete(self):
+        response = RouteResponse.deserialize({
             'id': 'id',
             'status': 400,
             'weight': 0.3,
@@ -88,7 +202,7 @@ class TestResponse:
         }
 
     def test_deserialize_minimal(self):
-        response = Response.deserialize({
+        response = RouteResponse.deserialize({
             'id': 'id',
             'body': '',
         })
@@ -100,34 +214,10 @@ class TestResponse:
         assert response.delay.min_delay == 0.0
         assert response.delay.max_delay == 0.0
         assert response.headers == {}
-        assert response.body == ""
-
-    @pytest.mark.parametrize('body', [{}, 1, True])
-    def test_add_automatic_json_header(self, body):
-        response = Response.deserialize({
-            'id': 'id',
-            'body': body
-        })
-        assert response.headers == {'content-type': 'application/json'}
-
-    @pytest.mark.parametrize('body', [{}, 1, True])
-    def test_doesnt_add_json_header_when_user_specifies_headers(self, body):
-        response = Response.deserialize({
-            'id': 'id',
-            'body': body,
-            'headers': {}
-        })
-        assert response.headers == {}
-
-    def test_doesnt_add_json_header_to_string(self):
-        response = Response.deserialize({
-            'id': 'id',
-            'body': 'string'
-        })
-        assert response.headers == {}
+        assert response.body == ''
 
     def test_use(self):
-        response = Response('id', '', Delay(), repeat=1)
+        response = RouteResponse('id', '', Delay(), repeat=1)
         assert response.is_active
         assert response.used_count == 0
         assert response.repeat == 1
@@ -136,22 +226,8 @@ class TestResponse:
         assert response.used_count == 1
         assert response.repeat == 1
 
-    def test_wait(self, mocker):
-        response = Response('id', '', Delay(1.0, 2.0))
-        sleep = mocker.patch('time.sleep')
-        response.wait()
-        sleep.assert_called_once()
-
-    def test_serialized_body_returns_strings_as_inserted(self):
-        response = Response('id', 'string', Delay())
-        response.serialized_body == 'string'
-
-    def test_serialized_body_returns_json_as_string(self):
-        response = Response('id', {'key': 'value'}, Delay())
-        response.serialized_body == '{"key": "value"}'
-
     def test_serialize_deserialize_complete(self):
-        response = Response.deserialize({
+        response = RouteResponse.deserialize({
             'id': 'id',
             'status': 400,
             'weight': 0.3,
@@ -181,17 +257,6 @@ class TestResponse:
             }
         }
 
-    def test_as_flask_response(self):
-        response = Response(
-            'id', {'key': 'value'}, Delay(), headers={'header': 'header_value'}
-        )
-
-        flask_response = response.as_flask_response()
-        assert isinstance(flask_response, flask.Response)
-        assert flask_response.status_code == 200
-        assert flask_response.data == b'{"key": "value"}'
-        assert flask_response.headers['header'] == 'header_value'
-
 
 @pytest.mark.unit
 class TestResponseSelectionStrategy:
@@ -216,8 +281,8 @@ class TestResponseSelectionStrategy:
 
     def test_greedy_selection(self):
         strategy = ResponseSelectionStrategy.greedy
-        r1 = Response('id1', '', Delay(), repeat=2)
-        r2 = Response('id2', '', Delay(), repeat=2)
+        r1 = RouteResponse('id1', '', Delay(), repeat=2)
+        r2 = RouteResponse('id2', '', Delay(), repeat=2)
 
         assert strategy.select_response([r1, r2]) is r1
         r1.use()
@@ -231,8 +296,8 @@ class TestResponseSelectionStrategy:
 
     def test_cycle_selection(self):
         strategy = ResponseSelectionStrategy.cycle
-        r1 = Response('id1', '', Delay(), repeat=2)
-        r2 = Response('id2', '', Delay(), repeat=3)
+        r1 = RouteResponse('id1', '', Delay(), repeat=2)
+        r2 = RouteResponse('id2', '', Delay(), repeat=3)
 
         assert strategy.select_response([r1, r2]) is r1
         r1.use()
@@ -248,8 +313,8 @@ class TestResponseSelectionStrategy:
 
     def test_random_selection(self):
         strategy = ResponseSelectionStrategy.random
-        r1 = Response('id1', '', Delay(), weight=0.4)
-        r2 = Response('id2', '', Delay(), weight=0.6)
+        r1 = RouteResponse('id1', '', Delay(), weight=0.4)
+        r2 = RouteResponse('id2', '', Delay(), weight=0.6)
 
         for i in range(250):
             response = strategy.select_response([r1, r2])
@@ -345,8 +410,8 @@ class TestRoute:
         }
 
     def test_get_response_found(self):
-        r1 = Response('id1', 'string', Delay())
-        r2 = Response('id2', 'string', Delay())
+        r1 = RouteResponse('id1', 'string', Delay())
+        r2 = RouteResponse('id2', 'string', Delay())
         route = Route(
             id='id1',
             responses=[r1, r2],
@@ -359,7 +424,7 @@ class TestRoute:
         assert route.get_response('id1') is r1
 
     def test_get_response_not_found(self):
-        r1 = Response('id1', 'string', Delay())
+        r1 = RouteResponse('id1', 'string', Delay())
         route = Route(
             id='id1',
             responses=[r1],
@@ -372,7 +437,7 @@ class TestRoute:
         assert route.get_response('id3') is None
 
     def test_use_increases_counter(self):
-        response = Response('id1', 'string', Delay())
+        response = RouteResponse('id1', 'string', Delay())
         route = Route(
             id='id1',
             responses=[response],
@@ -419,7 +484,7 @@ class TestRoute:
         route = Route(
             id='id1',
             responses=[
-                Response('id1', '', Delay(), weight=0.4)
+                RouteResponse('id1', '', Delay(), weight=0.4)
             ],
             response_selection=ResponseSelectionStrategy.random,
             path=re.compile(r'/test.*'),
@@ -434,7 +499,7 @@ class TestRoute:
         assert route.match(request)
 
     def test_select_response(self):
-        response = Response('id1', 'string', Delay())
+        response = RouteResponse('id1', 'string', Delay())
         route = Route(
             id='id1',
             responses=[response],
@@ -447,7 +512,7 @@ class TestRoute:
         assert route.select_response() is response
 
     def test_is_not_active_if_no_active_response(self):
-        response = Response('id1', 'string', Delay(), repeat=0)
+        response = RouteResponse('id1', 'string', Delay(), repeat=0)
         route = Route(
             id='id1',
             responses=[response],

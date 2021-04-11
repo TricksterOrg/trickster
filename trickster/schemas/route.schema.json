@@ -4,6 +4,56 @@
     "type": "object",
     "title": "Add route scheme",
     "description": "Validation schema for POST /internal/route",
+    "definitions": {
+        "response": {
+            "$id": "response",
+            "type": "object",
+            "description": "Response to be returned.",
+            "properties": {
+                "status": {
+                    "type": "integer",
+                    "description": "HTTP status to be returned.",
+                    "minimum": 100
+                },
+                "headers": {
+                    "type": "object",
+                    "description": "Extra headers to be returned.",
+                    "additionalProperties" : {
+                        "type" : "string"
+                    }
+                },
+                "body": {
+                    "description": "Value to be returned."
+                },
+                "delay": {
+                    "description": "Min and max delay in seconds of the response.",
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": [
+                                {
+                                    "type": "number",
+                                    "description": "Minimal delay.",
+                                    "minimum": 0.0
+                                },
+                                {
+                                    "type": "number",
+                                    "description": "Maximal delay.",
+                                    "minimum": 0.0
+                                }
+                            ]
+                        },
+                        {
+                            "type": "number",
+                            "description": "Fixed delay.",
+                            "minimum": 0.0
+                        }
+                    ]
+                }
+            },
+            "required": ["body"]
+        }
+    },
     "properties": {
         "id": {
             "type": "string",
@@ -55,7 +105,10 @@
                         "password": {
                             "type": "string",
                             "description": "Password."
-                        }
+                        },
+                        "unauthorized_response": {
+                            "$ref": "#/definitions/response"
+                        } 
                     },
                     "required": ["method", "username", "password"],
                     "additionalProperties": false
@@ -74,7 +127,10 @@
                         "value": {
                             "type": "string",
                             "description": "Expected cookie value."
-                        }
+                        },
+                        "unauthorized_response": {
+                            "$ref": "#/definitions/response"
+                        } 
                     },
                     "required": ["method", "name", "value"],
                     "additionalProperties": false
@@ -89,7 +145,10 @@
                         "key": {
                             "type": "string",
                             "description": "HMAC key"
-                        }
+                        },
+                        "unauthorized_response": {
+                            "$ref": "#/definitions/response"
+                        } 
                     },
                     "required": ["method", "key"],
                     "additionalProperties": false
@@ -107,7 +166,10 @@
                             "additionalProperties" : {
                                 "type" : "string"
                             }
-                        }
+                        },
+                        "unauthorized_response": {
+                            "$ref": "#/definitions/response"
+                        } 
                     },
                     "required": ["method", "fields"],
                     "additionalProperties": false
@@ -122,7 +184,10 @@
                         "token": {
                             "type": "string",
                             "description": "Token."
-                        }
+                        },
+                        "unauthorized_response": {
+                            "$ref": "#/definitions/response"
+                        } 
                     },
                     "required": ["method", "token"],
                     "additionalProperties": false
@@ -135,66 +200,31 @@
             "items": {
                 "type": "object",
                 "description": "Response to be returned.",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "description": "Unique identifier of response.",
-                        "pattern": "^[\\d\\w]+$"
+                "allOf": [
+                    {
+                        "$ref": "#/definitions/response"
                     },
-                    "status": {
-                        "type": "integer",
-                        "description": "HTTP status to be returned.",
-                        "minimum": 100
-                    },
-                    "headers": {
-                        "type": "object",
-                        "description": "Extra headers to be returned.",
-                        "additionalProperties" : {
-                            "type" : "string"
-                        }
-                    },
-                    "body": {
-                        "description": "Value to be returned."
-                    },
-                    "repeat": {
-                        "type": "integer",
-                        "description": "Number of times response can be used before it's discarded.",
-                        "minimum": 1
-                    },
-                    "weight": {
-                        "type": "number",
-                        "description": "Weight of the response if random selection is used.",
-                        "minimum": 0.0,
-                        "maximum": 1.0
-                    },
-                    "delay": {
-                        "description": "Min and max delay in seconds of the response.",
-                        "anyOf": [
-                            {
-                                "type": "array",
-                                "items": [
-                                    {
-                                        "type": "number",
-                                        "description": "Minimal delay.",
-                                        "minimum": 0.0
-                                    },
-                                    {
-                                        "type": "number",
-                                        "description": "Maximal delay.",
-                                        "minimum": 0.0
-                                    }
-                                ]
+                    {
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "description": "Unique identifier of response.",
+                                "pattern": "^[\\d\\w]+$"
                             },
-                            {
+                            "repeat": {
+                                "type": "integer",
+                                "description": "Number of times response can be used before it's discarded.",
+                                "minimum": 1
+                            },
+                            "weight": {
                                 "type": "number",
-                                "description": "Fixed delay.",
-                                "minimum": 0.0
+                                "description": "Weight of the response if random selection is used.",
+                                "minimum": 0.0,
+                                "maximum": 1.0
                             }
-                        ]
+                        }
                     }
-                },
-                "required": ["body"],
-                "additionalProperties": false
+                ]
             }
         }
     },

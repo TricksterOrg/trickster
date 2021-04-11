@@ -8,7 +8,7 @@ import random
 import re
 import time
 import uuid
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar, Union
 
 import flask
 
@@ -51,13 +51,13 @@ class Delay:
 
 
 class ResponseSelectionStrategy(enum.Enum):
-    """Strategy of how to select a Response from list of responses."""
+    """Strategy of how to select a RouteResponses from list of responses."""
 
     cycle = 'cycle'
     random = 'random'
     greedy = 'greedy'
 
-    def select_response_cycle(self, responses: List[Response]) -> Optional[Response]:
+    def select_response_cycle(self, responses: List[RouteResponse]) -> Optional[RouteResponse]:
         """Select proper response from list of candidate responses.
 
         Consumes responses in order of definition. Cycles through items one by one.
@@ -69,7 +69,7 @@ class ResponseSelectionStrategy(enum.Enum):
                 candidate = response
         return candidate
 
-    def select_response_random(self, responses: List[Response]) -> Optional[Response]:
+    def select_response_random(self, responses: List[RouteResponse]) -> Optional[RouteResponse]:
         """Select proper response from list of candidate responses.
 
         Selects random response from all available.
@@ -79,7 +79,7 @@ class ResponseSelectionStrategy(enum.Enum):
         result = random.choices(population=population, weights=weights, k=1)
         return result[0] if result else None
 
-    def select_response_greedy(self, responses: List[Response]) -> Optional[Response]:
+    def select_response_greedy(self, responses: List[RouteResponse]) -> Optional[RouteResponse]:
         """Select proper response from list of candidate responses.
 
         Consumes responses in order of definition until the first one is exhausted,
@@ -90,7 +90,7 @@ class ResponseSelectionStrategy(enum.Enum):
                 return response
         return None
 
-    def select_response(self, responses: Iterable[Response]) -> Optional[Response]:
+    def select_response(self, responses: Iterable[RouteResponse]) -> Optional[RouteResponse]:
         """Select proper response from list of candidate responses."""
         method_name = f'select_response_{self.value}'
         method = getattr(self, method_name)
@@ -106,26 +106,14 @@ class ResponseSelectionStrategy(enum.Enum):
         return cls(method or 'greedy')
 
 
-class Response(IdItem):
+class Response:
     """Container for predefined response."""
 
-    def __init__(
-        self,
-        id: str,
-        body: Any,
-        delay: Delay,
-        headers: Optional[Dict[str, Any]] = None,
-        status: int = 200,
-        repeat: Optional[int] = None,
-        weight: float = 0.5
-    ) -> None:
-        super().__init__(id)
+    def __init__(self, body: Any, delay: Delay, headers: Optional[Dict[str, Any]] = None, status: int = 200) -> None:
         self.body = body
+        self.delay = delay
         self.headers = headers or {}
         self.status = status
-        self.repeat = repeat
-        self.weight = weight
-        self.delay = delay
         self.used_count = 0
 
     @property
@@ -147,13 +135,9 @@ class Response(IdItem):
     def serialize(self) -> Dict[str, Any]:
         """Convert Response to json."""
         return {
-            **super().serialize(),
-            'is_active': self.is_active,
             'status': self.status,
             'used_count': self.used_count,
-            'weight': self.weight,
             'headers': self.headers,
-            'repeat': self.repeat,
             'delay': self.delay.serialize(),
             'body': self.body
         }
@@ -162,17 +146,12 @@ class Response(IdItem):
         """Increases usage counter of Response."""
         self.used_count += 1
 
-    @property
-    def is_active(self) -> bool:
-        """Return True if response has some uses left."""
-        return self.repeat is None or self.repeat > self.used_count
-
     def wait(self) -> None:
         """Sleep for time specified in the response."""
         self.delay.wait()
 
     @classmethod
-    def deserialize(cls, data: Dict[str, Any]) -> Response:
+    def deserialize(cls: Type[ResponseType], data: Dict[str, Any]) -> ResponseType:
         """Convert json to Response."""
         delay = Delay.deserialize(data.pop('delay', None))
 
@@ -186,13 +165,51 @@ class Response(IdItem):
         return cls(delay=delay, headers=headers, **data)
 
 
+# https://stackoverflow.com/questions/58986031/type-hinting-child-class-returning-self/58986197#58986197
+ResponseType = TypeVar('ResponseType', bound=Response)
+
+
+class RouteResponse(Response, IdItem):
+    """Container for predefined response in Route."""
+
+    def __init__(
+        self,
+        id: str,
+        body: Any,
+        delay: Delay,
+        headers: Optional[Dict[str, Any]] = None,
+        status: int = 200,
+        repeat: Optional[int] = None,
+        weight: float = 0.5
+    ) -> None:
+        Response.__init__(self, body, delay, headers, status)
+        IdItem.__init__(self, id)
+        self.repeat = repeat
+        self.weight = weight
+
+    def serialize(self) -> Dict[str, Any]:
+        """Convert Response to json."""
+        return {
+            **Response.serialize(self),
+            **IdItem.serialize(self),
+            'is_active': self.is_active,
+            'weight': self.weight,
+            'repeat': self.repeat,
+        }
+
+    @property
+    def is_active(self) -> bool:
+        """Return True if response has some uses left."""
+        return self.repeat is None or self.repeat > self.used_count
+
+
 class Route(IdItem):
     """Route is a pair of request arguments and all possible reponses."""
 
     def __init__(
         self,
         id: str,
-        responses: Iterable[Response],
+        responses: Iterable[RouteResponse],
         response_selection: ResponseSelectionStrategy,
         path: re.Pattern,
         auth: Auth,
@@ -204,7 +221,7 @@ class Route(IdItem):
         self.path = path
         self.auth = auth
         self.used_count = 0
-        self.responses: IdList[Response] = IdList()
+        self.responses: IdList[RouteResponse] = IdList()
 
         try:
             for response in responses:
@@ -225,18 +242,18 @@ class Route(IdItem):
             'is_active': self.is_active
         }
 
-    def get_response(self, response_id: str) -> Optional[Response]:
-        """Get a Response by its id."""
+    def get_response(self, response_id: str) -> Optional[RouteResponse]:
+        """Get a RouteResponse by its id."""
         return self.responses.get(response_id)
 
     @classmethod
-    def _create_responses(cls, responses: List[Dict[str, Any]]) -> List[Response]:
-        """Create Response objects from json."""
+    def _create_responses(cls, responses: List[Dict[str, Any]]) -> List[RouteResponse]:
+        """Create RouteResponse objects from json."""
         result = []
         for response in responses:
             if 'id' not in response:
                 response['id'] = str(uuid.uuid4())
-            result.append(Response.deserialize(response))
+            result.append(RouteResponse.deserialize(response))
         return result
 
     @classmethod
@@ -257,8 +274,8 @@ class Route(IdItem):
             **data
         )
 
-    def use(self, response: Response = None) -> None:
-        """Increment use counter of this Route and given Response."""
+    def use(self, response: RouteResponse = None) -> None:
+        """Increment use counter of this Route and given RouteResponse."""
         self.used_count += 1
         if response:
             response.use()
@@ -279,7 +296,7 @@ class Route(IdItem):
         """Return True, if this requests path matches given InputRequest."""
         return bool(self.path.match(path))
 
-    def select_response(self) -> Optional[Response]:
+    def select_response(self) -> Optional[RouteResponse]:
         """Select response from list of responses."""
         return self.response_selection.select_response(self.responses)
 
@@ -289,7 +306,7 @@ class Route(IdItem):
 
     @property
     def is_active(self) -> bool:
-        """Return True if Route has at least one active Response."""
+        """Return True if Route has at least one active RouteResponse."""
         for response in self.responses:
             if response.is_active:
                 return True
@@ -354,7 +371,7 @@ class Router:
         return route_object
 
     def match(self, incoming_request: IncomingRequest) -> Optional[Route]:
-        """Find matching Route and return apropriet Response or None."""
+        """Find matching Route and return apropriet RouteResponse or None."""
         for route in self.routes:
             if route.match(incoming_request):
                 return route

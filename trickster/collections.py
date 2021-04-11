@@ -19,7 +19,7 @@ IdItemType = TypeVar('IdItemType', bound=IdItem)
 
 
 class IdList(Generic[IdItemType]):
-    """List of Routes or Responses."""
+    """List of items with ID."""
 
     def __init__(self) -> None:
         self.items: List[IdItemType] = []
