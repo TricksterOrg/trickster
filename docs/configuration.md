@@ -71,7 +71,6 @@ Trickster allows you to set defalt routes that will be loaded when in starts. Yo
 	        "body": "response1"
 	    }
         ]
-
     },
     {
         "path": "/endpoint2",
@@ -90,7 +89,7 @@ You can configure internal routes by providing path to json file using the `-r/-
 ### Docker
 If you use docker, you may provide path to default routes using the environmen variable `TRICKSTER_ROUTES`. You also have to mount the file (or directory containing the file) inside the container.
 
-Eg.  `docker run --mount type=bind,source="$(pwd)"/test.json,target=/routes.json,readonly -e TRICKSTER_ROUTES=/routes.json`
+Eg.  `docker run --mount type=bind,source="$(pwd)"/test.json,target=/routes.json,readonly -e TRICKSTER_ROUTES=/routes.json tesarekjakub/trickster`
 
 ### Docker-compose
 
