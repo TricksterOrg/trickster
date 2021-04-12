@@ -66,6 +66,17 @@ class Delay:
         return cls(*data)
 
 
+class ResponseContext:
+    """Context containing information about current request that can be used to render response."""
+
+    def __init__(self, variables: Dict[str, Any]):
+        self.variables = variables
+
+    def get(self, key: str) -> Any:
+        """Get a variable from context."""
+        return self.variables.get(key, None)
+
+
 class Response:
     """Container for predefined response."""
 
@@ -76,18 +87,17 @@ class Response:
         self.status = status
         self.used_count = 0
 
-    @property
-    def serialized_body(self) -> str:
+    def serialize_body(self, context: ResponseContext) -> str:
         """Convert specified response body to string."""
         if isinstance(self.body, str):
             return self.body
         else:
             return json.dumps(self.body)
 
-    def as_flask_response(self) -> flask.Response:
+    def as_flask_response(self, context: ResponseContext) -> flask.Response:
         """Convert Request to flask.Response suitable to return from an endpoint."""
         return flask.Response(
-            response=self.serialized_body,
+            response=self.serialize_body(context),
             status=self.status,
             headers=self.headers
         )

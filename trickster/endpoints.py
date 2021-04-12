@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flask import Blueprint, Response, abort, current_app, jsonify, make_response, request
 
-from trickster.routing import RouteConfigurationError
+from trickster.routing import ResponseContext, RouteConfigurationError
 from trickster.routing.auth import AuthenticationError
 from trickster.routing.input import HTTP_METHODS, IncomingFlaskRequest, IncomingTestRequest
 from trickster.validation import request_schema
@@ -123,7 +123,8 @@ def respond(path: str) -> Response:
             response = route.select_response()
             route.use(response)
             response.wait()
-            return response.as_flask_response()
+            context = ResponseContext({})
+            return response.as_flask_response(context)
         abort(404)
     except AuthenticationError as error:
         abort(401, str(error))

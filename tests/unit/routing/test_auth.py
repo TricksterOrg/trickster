@@ -24,6 +24,7 @@ class TestAuth:
         auth = Auth.deserialize({'method': None})
         assert isinstance(auth, NoAuth)
 
+
 @pytest.mark.unit
 class TestAuthWithResponse:
     def test_deserialize_missing_method(self):
