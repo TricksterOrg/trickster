@@ -7,7 +7,7 @@ from typing import Any, Optional, Tuple
 from flask import Flask, jsonify
 
 from trickster.config import Config
-from trickster.endpoints import external_api, internal_api
+from trickster.endpoints import external, internal, utility
 from trickster.routing.router import Router
 
 from werkzeug.exceptions import HTTPException
@@ -42,8 +42,9 @@ class ApiApp(Flask):
 
     def _register_blueprints(self) -> None:
         """Register api endpoints."""
-        self.register_blueprint(internal_api, url_prefix=self.config['INTERNAL_PREFIX'])
-        self.register_blueprint(external_api, url_prefix='')
+        self.register_blueprint(internal.endpoints, url_prefix=self.config['INTERNAL_PREFIX'])
+        self.register_blueprint(utility.endpoints, url_prefix=self.config['INTERNAL_PREFIX'])
+        self.register_blueprint(external.endpoints, url_prefix='')
 
     def run(self) -> None:  # type: ignore # pragma: no cover
         """Start app.

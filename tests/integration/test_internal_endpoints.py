@@ -1,37 +1,10 @@
-"""Integration tests of API endpoints.
-
-Attributes of objects should be defined in this order:
-
-# Route
-id
-path
-method
-response_selection
-used_count
-is_active
-auth
-responses
-
-
-# Response 
-id
-status
-repeat
-weight
-used_count
-is_active
-delay
-headers
-body
-"""
-
+"""Integration tests of internal API endpoints."""
 
 import pytest
-from pathlib import Path
 
 
 @pytest.mark.integration
-class TestApi:
+class TestInternalEndpoints:
     def test_get_empty_routes(self, client):
         response = client.get('/internal/routes')
         assert response.json == []
@@ -786,3 +759,19 @@ class TestApi:
             'error': 'Unauthorized',
             'message': 'HMAC authentication failed, URL is missing required parameter: "hmac_timestamp".'
         }
+
+    def test_reset(self, client):
+        client.post('/internal/routes', json={
+            'path': '/path',
+            'responses': [
+                {
+                   'body': 'response_body'
+                }
+            ]
+        })
+        response = client.post('/internal/reset')
+        assert response.status_code == 204
+
+        response = client.get('/internal/routes')
+        assert response.status_code == 200
+        assert response.json == []
