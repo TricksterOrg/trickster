@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] - 2021-04-11
+### Fixed
+- Hotfix: (Router is not shared between gunicorn workers)[https://github.com/JakubTesarek/trickster/issues/11]
+
 ## [2.0.1] - 2021-04-11
 ### Fixed
 - Hotfix: CLI mode invalid argument error fixed
