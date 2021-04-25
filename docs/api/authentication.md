@@ -10,7 +10,7 @@ parent: API
 
 This section provides close look at authentication in Trickster. After reading in, you should understand how to set up authentication for your Routes.
 
-> Authentication in Tricster is under development. The authentication methods and configuration will probably change in the future. If you encounter and error or you are missing a feature, please [create an issue](https://github.com/JakubTesarek/trickster/issues).
+> Authentication in Trickster is under development. The authentication methods and configuration will probably change in the future. If you encounter and error or you are missing a feature, please [file an issue](https://github.com/JakubTesarek/trickster/issues).
 
 We also prepared [a tutorial that focuses on authentication](/trickster/cookbook/login-form.html). It introduces authentication on an example of a login/logout form. If you are not not familiar with authentication at all, it might be a good place to start.
 
@@ -20,7 +20,7 @@ We also prepared [a tutorial that focuses on authentication](/trickster/cookbook
 
 ## Configuring authentication
 
-You can attach authentication method to each of your Routes. If you do and a request is matched by a Route with authentication, Trickster will check if the request contains the correct values. If it does, it will return Response as normal. If not, it will return a [401 Unauthorized error](/trickster/api/responses.html#401-unauthorized).
+You can attach authentication method to each of your Routes. If you do and a request is matched by a Route with authentication, Trickster will check if the request contains the correct values. If it does, it will return Response as normal. If not, it will return [an error response](#error-response).
 
 By default Route doesn't authenticate requests.
 
@@ -28,6 +28,29 @@ To attach an authentication method to Route, use [`authentication` attribute of 
 
 Authentication can be set for any Route, regardles of it's HTTP method. Some types of authentication like Basic work with all HTTP methods just fine. Others, like Form, can be set for but they don't work well with GET http method. You can still call the Route but since only matches GET requests and you can't sent form data, the authentication will never succeed.
 
+
+## Error response
+
+You can specify a response that will be returned when the authentication fails.
+
+You can set a custom response using the `unauthorized_response` key. The configuration is the same as any other [Response](/trickster/api/model.html#response) and supports the same attributes except `id`, `weight` and `repeat`.
+
+If you don't specify the `unauthorized_response`, Trickster will use a default one:
+
+```json
+{
+    "body": {
+        "error": {"$ref": "$.error.error"},
+        "message": {"$ref": "$.error.message"}
+    },
+    "status": 401,
+    "headers": {
+        "content-type": "application/json"
+    }
+}
+```
+
+When specifying your own custom `unauthorized_response`, you might find [dynamically generated response](/trickster/api/dynamic-responses.html) usefull. 
 
 
 ## Authentication methods

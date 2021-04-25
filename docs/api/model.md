@@ -248,7 +248,7 @@ required
 - You can set it to be almost anything and Trickster will return it back to you.
 - If you set `body` to be a string, Trickster will return it as is. You should consider to also set a `content-type` header.
 - If you set `body` to anything else than a string , Trickster will serialize the body to json. If you also don't specify your own `headers`, it will automatically add `{"content-type": "application/json"}`.
-
+- Trickster also supports [dynamically generated responses](/trickster/api/dynamic-responses.html).
 
 ## Complete example
 
