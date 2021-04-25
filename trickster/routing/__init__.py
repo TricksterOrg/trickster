@@ -41,7 +41,7 @@ class AuthenticationError(TricksterException):
     def serialize(self) -> Dict[str, Any]:
         """Convert error to json."""
         return {
-            'name': 'Unauthorized',
+            'error': 'Unauthorized',
             'message': str(self),
             'code': self.http_code
         }

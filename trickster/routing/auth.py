@@ -98,7 +98,7 @@ class AuthWithResponse(Auth, abc.ABC):
         else:
             return Response(
                 body=JsonResponseBody({
-                    'error': {'$ref': '$.error.name'},
+                    'error': {'$ref': '$.error.error'},
                     'message': {'$ref': '$.error.message'}
                 }),
                 delay=Delay(0.0),
