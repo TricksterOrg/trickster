@@ -39,6 +39,15 @@ def validate_json(json_data: Any, schema_name: str) -> None:
     validator(json_data)
 
 
+def match_shema(json_data: Any, schema_name: str) -> bool:
+    """Return True if given json data match schema."""
+    try:
+        validate_json(json_data, schema_name)
+        return True
+    except fastjsonschema.JsonSchemaException:
+        return False
+
+
 @functools.lru_cache
 def compile_json_schema(schema_path: pathlib.Path) -> Callable:
     """Compiles given schema to fastjson validation function."""

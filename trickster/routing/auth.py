@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterator, Optional, Tuple, Type
 
 import basicauth
 
-from trickster.routing import AuthenticationError, Delay, Response, RouteConfigurationError
+from trickster.routing import AuthenticationError, Delay, JsonResponseBody, Response, RouteConfigurationError
 from trickster.routing.input import IncomingRequest
 
 
@@ -92,19 +92,28 @@ class AuthWithResponse(Auth, abc.ABC):
         }
 
     @classmethod
+    def _deserialize_unauthorized_response(cls, data: Optional[Dict[str, Any]]) -> Response:
+        if data is not None:
+            return Response.deserialize(data)
+        else:
+            return Response(
+                body=JsonResponseBody({
+                    'error': {'$ref': '$.error.name'},
+                    'message': {'$ref': '$.error.message'}
+                }),
+                delay=Delay(0.0),
+                status=401,
+                headers={
+                    'content-type': 'application/json'
+                }
+            )
+
+    @classmethod
     def deserialize(cls, data: Dict[str, Any]) -> Auth:
         """Convert json value to Auth."""
         if 'method' in data:
-            implementation = cls._find_implementation(data['method'])
-            data.pop('method')
-            if response_data := data.pop('unauthorized_response', None):
-                response = Response.deserialize(response_data)
-            else:
-                response = Response(
-                    {'error': 'Unauthorized', 'message': 'Authentication failed.'},
-                    Delay(0.0),
-                    status=401
-                )
+            implementation = cls._find_implementation(data.pop('method'))
+            response = cls._deserialize_unauthorized_response(data.pop('unauthorized_response', None))
             return implementation(response, **data)
         else:
             raise RouteConfigurationError('Missing field "method" of Auth.')

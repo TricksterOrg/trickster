@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from trickster.routing import DuplicateRouteError, MissingRouteError, RouteConfigurationError
+from trickster.routing import DuplicateRouteError, MissingRouteError, RouteConfigurationError, JsonResponseBody, ResponseBody
 from trickster.routing.auth import NoAuth
 from trickster.routing.router import Delay, RouteResponse, ResponseSelectionStrategy, Route, Router
 from trickster.routing.input import IncomingTestRequest
@@ -35,7 +35,8 @@ class TestRouteResponse:
         assert response.headers == {
             'content-type': 'application/json'
         }
-        assert response.body == {
+        assert isinstance(response.body, JsonResponseBody)
+        assert response.body.content == {
             'works': True
         }
 
@@ -52,7 +53,8 @@ class TestRouteResponse:
         assert response.delay.min_delay == 0.0
         assert response.delay.max_delay == 0.0
         assert response.headers == {}
-        assert response.body == ''
+        assert isinstance(response.body, ResponseBody)
+        assert response.body.content == ''
 
     def test_use(self):
         response = RouteResponse('id', '', Delay(), repeat=1)

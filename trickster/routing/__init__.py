@@ -9,7 +9,10 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
 import flask
 
+import jsonpath_ng as jsonpath
+
 from trickster import TricksterException
+from trickster.validation import match_shema
 
 
 class RouteConfigurationError(TricksterException, ValueError):
@@ -32,6 +35,16 @@ class MissingRouteError(RouteConfigurationError):
 
 class AuthenticationError(TricksterException):
     """Exception raised when user could not be authenticated."""
+
+    http_code: int = 401
+
+    def serialize(self) -> Dict[str, Any]:
+        """Convert error to json."""
+        return {
+            'name': 'Unauthorized',
+            'message': str(self),
+            'code': self.http_code
+        }
 
 
 class Delay:
@@ -69,35 +82,108 @@ class Delay:
 class ResponseContext:
     """Context containing information about current request that can be used to render response."""
 
-    def __init__(self, variables: Dict[str, Any]):
-        self.variables = variables
+    def __init__(self) -> None:
+        self.variables: Dict[str, Any] = {}
+
+    def __setitem__(self, name: str, value: Any) -> None:
+        """Set item to context."""
+        if not isinstance(value, (str, int, list, dict)):
+            value = value.serialize()
+        self.variables[name] = value
+
+    def __getitem__(self, name: str) -> Any:
+        """Get item from context."""
+        return self.variables[name]
 
     def get(self, key: str) -> Any:
-        """Get a variable from context."""
-        return self.variables.get(key, None)
+        """Get variable from context by jsonpath."""
+        expr = jsonpath.parse(key)
+        results = expr.find(self.variables)
+
+        if len(results) > 1:
+            return [r.value for r in results]
+        elif len(results) == 1:
+            return results[0].value
+        else:
+            return None
+
+
+class ResponseBody:
+    """Body of response."""
+
+    def __init__(self, content: Any):
+        self.content = content
+
+    def as_flask_response(self, context: ResponseContext) -> str:
+        """Convert response body to string within given context."""
+        return self.content
+
+    def serialize(self) -> Any:
+        """Convert response body to json."""
+        return self.content
+
+    @property
+    def default_headers(self) -> Dict[str, str]:
+        """Get default headers of response."""
+        return {}
+
+    @classmethod
+    def deserialize(cls, data: Any) -> ResponseBody:
+        """Convert json to response body."""
+        if isinstance(data, str):
+            return ResponseBody(data)
+        else:
+            return JsonResponseBody(data)
+
+
+class JsonResponseBody(ResponseBody):
+    """Json body of response."""
+
+    @property
+    def default_headers(self) -> Dict[str, str]:
+        """Get default headers of response."""
+        return {'content-type': 'application/json'}
+
+    def as_flask_response(self, context: ResponseContext) -> str:
+        """Convert response body to string within given context."""
+        return json.dumps(self._render(self.content, context))
+
+    def _is_dynamic_attr(self, attr: Dict[str, Any]) -> bool:
+        """Return True if given attribute should be evaluated within context."""
+        return match_shema(attr, 'dynamic_attribute.schema.json')
+
+    def _render(self, attr: Any, context: ResponseContext) -> Any:
+        """Evaluate given attribute within context."""
+        if self._is_dynamic_attr(attr):
+            return context.get(attr['$ref'])
+        elif isinstance(attr, dict):
+            return {k: self._render(v, context) for k, v in attr.items()}
+        elif isinstance(attr, list):
+            return [self._render(v, context) for v in attr]
+        else:
+            return attr
 
 
 class Response:
     """Container for predefined response."""
 
-    def __init__(self, body: Any, delay: Delay, headers: Optional[Dict[str, Any]] = None, status: int = 200) -> None:
+    def __init__(
+        self,
+        body: ResponseBody,
+        delay: Delay,
+        headers: Optional[Dict[str, Any]] = None,
+        status: int = 200
+    ) -> None:
         self.body = body
         self.delay = delay
         self.headers = headers or {}
         self.status = status
         self.used_count = 0
 
-    def serialize_body(self, context: ResponseContext) -> str:
-        """Convert specified response body to string."""
-        if isinstance(self.body, str):
-            return self.body
-        else:
-            return json.dumps(self.body)
-
     def as_flask_response(self, context: ResponseContext) -> flask.Response:
         """Convert Request to flask.Response suitable to return from an endpoint."""
         return flask.Response(
-            response=self.serialize_body(context),
+            response=self.body.as_flask_response(context),
             status=self.status,
             headers=self.headers
         )
@@ -109,7 +195,7 @@ class Response:
             'used_count': self.used_count,
             'headers': self.headers,
             'delay': self.delay.serialize(),
-            'body': self.body
+            'body': self.body.serialize()
         }
 
     def use(self) -> None:
@@ -124,15 +210,10 @@ class Response:
     def deserialize(cls: Type[ResponseType], data: Dict[str, Any]) -> ResponseType:
         """Convert json to Response."""
         delay = Delay.deserialize(data.pop('delay', None))
+        body = ResponseBody.deserialize(data.pop('body', None))
+        headers = data.pop('headers', body.default_headers)
 
-        if 'headers' in data:
-            headers = data.pop('headers')
-        elif not isinstance(data['body'], str):
-            headers = {'content-type': 'application/json'}
-        else:
-            headers = {}
-
-        return cls(delay=delay, headers=headers, **data)
+        return cls(delay=delay, headers=headers, body=body, **data)
 
 
 # https://stackoverflow.com/questions/58986031/type-hinting-child-class-returning-self/58986197#58986197

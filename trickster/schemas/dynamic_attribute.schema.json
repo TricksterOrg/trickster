@@ -1,0 +1,16 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "dynamic_attribute",
+    "type": "object",
+    "title": "Dynamic attribute route schema",
+    "description": "Validation for dynamic attributes.",
+
+    "properties": {
+        "$ref": {
+            "type": "string",
+            "description": "Reference to variable."
+        }
+    },
+    "required": ["$ref"],
+    "additionalProperties": false
+}

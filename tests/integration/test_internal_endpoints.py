@@ -54,7 +54,17 @@ class TestInternalEndpoints:
             'auth': {
                 'method': 'basic',
                 'username': 'username',
-                'password': 'password'
+                'password': 'password',
+                'unauthorized_response': {
+                    'status': 401,
+                    'delay': 0.5,
+                    'headers': {
+                        'content-type': 'application/json'
+                    },
+                    'body': {
+                        'content': "unauthorized"
+                    }
+                }
             },
             'responses': [
                 {
@@ -99,14 +109,15 @@ class TestInternalEndpoints:
                 'password': 'password',
                 'username': 'username',
                 'unauthorized_response': {
-                    'body': {
-                        'error': 'Unauthorized',
-                        'message': 'Authentication failed.'
-                    },
-                    'delay': 0.0,
-                    'headers': {},
                     'status': 401,
-                    'used_count': 0
+                    'delay': 0.5,
+                    'used_count': 0,
+                    'headers': {
+                        'content-type': 'application/json'
+                    },
+                    'body': {
+                        'content': "unauthorized"
+                    }
                 }
             },
             'responses': [
