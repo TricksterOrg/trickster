@@ -139,6 +139,10 @@ class ResponseBody:
 class JsonResponseBody(ResponseBody):
     """Json body of response."""
 
+    def __init__(self, content: Any):
+        self._validate_attribute(content)
+        super().__init__(content)
+
     @property
     def default_headers(self) -> Dict[str, str]:
         """Get default headers of response."""
@@ -146,22 +150,37 @@ class JsonResponseBody(ResponseBody):
 
     def as_flask_response(self, context: ResponseContext) -> str:
         """Convert response body to string within given context."""
-        return json.dumps(self._render(self.content, context))
+        return json.dumps(self._render_attribute(self.content, context))
 
-    def _is_dynamic_attr(self, attr: Dict[str, Any]) -> bool:
+    def _is_dynamic_attribute(self, attr: Dict[str, Any]) -> bool:
         """Return True if given attribute should be evaluated within context."""
         return match_shema(attr, 'dynamic_attribute.schema.json')
 
-    def _render(self, attr: Any, context: ResponseContext) -> Any:
+    def _render_attribute(self, attr: Any, context: ResponseContext) -> Any:
         """Evaluate given attribute within context."""
-        if self._is_dynamic_attr(attr):
+        if self._is_dynamic_attribute(attr):
             return context.get(attr['$ref'])
         elif isinstance(attr, dict):
-            return {k: self._render(v, context) for k, v in attr.items()}
+            return {k: self._render_attribute(v, context) for k, v in attr.items()}
         elif isinstance(attr, list):
-            return [self._render(v, context) for v in attr]
+            return [self._render_attribute(v, context) for v in attr]
         else:
             return attr
+
+    def _validate_attribute(self, attr: Any) -> None:  # noqa: C901
+        """Recursively validate given attribute."""
+        # TODO: This method is too similiar to `_render_attribute`. Refactor!
+        if self._is_dynamic_attribute(attr):
+            try:
+                jsonpath.parse(attr['$ref'])
+            except Exception as e:
+                raise RouteConfigurationError(f'Invalid jsonpath query "{attr["$ref"]}": {e}') from e
+        elif isinstance(attr, dict):
+            for v in attr.values():
+                self._validate_attribute(v)
+        elif isinstance(attr, list):
+            for v in attr:
+                self._validate_attribute(v)
 
 
 class Response:

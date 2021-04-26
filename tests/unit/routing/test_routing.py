@@ -270,3 +270,12 @@ class TestJsonResponseBody:
     def test_default_headers(self):
         response_body = JsonResponseBody({'key': 'value'})
         assert response_body.default_headers == {'content-type': 'application/json'} 
+
+    @pytest.mark.parametrize('payload', [
+        {'$ref': '$.key1 + $.key2'},
+        [{'$ref': 'invalid payload'}],
+        {'key': {'$ref': 'invalid payload'}}
+    ])
+    def test_raises_error_when_created_with_invalid_payload(self, payload):
+        with pytest.raises(RouteConfigurationError):
+            JsonResponseBody(payload)
