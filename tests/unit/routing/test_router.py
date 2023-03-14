@@ -243,6 +243,8 @@ class TestRoute:
             'path': '/test.*',
             'auth': None,
             'method': 'GET',
+            'body': None,
+            'body_matching_method': 'exact',
             'used_count': 0,
             'is_active': False
         }
@@ -335,6 +337,90 @@ class TestRoute:
             method='GET'
         )
         assert route.match(request)
+
+    def test_match_body_exact(self):
+        route = Route(
+            id='id1',
+            responses=[
+                RouteResponse('id1', '', Delay(), weight=0.4)
+            ],
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET',
+            body='test',
+            body_matching_method='exact'
+        )
+        request = IncomingTestRequest(
+            base_url='http://localhost/',
+            full_path='/test_url',
+            method='GET',
+            body='test'
+        )
+        assert route.match(request)
+
+    def test_match_body_exact_not_matching(self):
+        route = Route(
+            id='id1',
+            responses=[
+                RouteResponse('id1', '', Delay(), weight=0.4)
+            ],
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET',
+            body='test',
+            body_matching_method='exact'
+        )
+        request = IncomingTestRequest(
+            base_url='http://localhost/',
+            full_path='/test_url',
+            method='GET',
+            body='non-matching content'
+        )
+        assert not route.match(request)
+
+    def test_match_body_regex(self):
+        route = Route(
+            id='id1',
+            responses=[
+                RouteResponse('id1', '', Delay(), weight=0.4)
+            ],
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET',
+            body='t.*t',
+            body_matching_method='regex'
+        )
+        request = IncomingTestRequest(
+            base_url='http://localhost/',
+            full_path='/test_url',
+            method='GET',
+            body='test'
+        )
+        assert route.match(request)
+
+    def test_match_body_regex_not_matching(self):
+        route = Route(
+            id='id1',
+            responses=[
+                RouteResponse('id1', '', Delay(), weight=0.4)
+            ],
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET',
+            body='t.*t',
+            body_matching_method='regex'
+        )
+        request = IncomingTestRequest(
+            base_url='http://localhost/',
+            full_path='/test_url',
+            method='GET',
+            body='tesT'
+        )
+        assert not route.match(request)
 
     def test_select_response(self):
         response = RouteResponse('id1', 'string', Delay())
@@ -467,7 +553,7 @@ class TestRouter:
             ]
         })
         router.remove_route('id1')
-        
+
         assert list(router.routes) == []
 
     def test_match_route(self):
@@ -489,7 +575,7 @@ class TestRouter:
             full_path='/endpoint',
             method='GET'
         )
-        
+
         assert router.match(request) is route
 
     def test_match_with_no_matching_route(self):
@@ -511,7 +597,7 @@ class TestRouter:
             full_path='/test',
             method='GET'
         )
-        
+
         assert router.match(request) is None
 
     def test_update_route_not_present(self):
@@ -613,5 +699,5 @@ class TestRouter:
                 ]
             }
         ])
-        
+
         assert len(router.routes) == 1

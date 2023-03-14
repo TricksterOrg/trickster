@@ -79,6 +79,18 @@
                 "PATCH"
             ]
         },
+        "body": {
+            "type": "string",
+            "description": "Body to be matched. Supports regular expression."
+        },
+        "body_matching_method": {
+            "type": "string",
+            "description": "Method for matching body.",
+            "enum": [
+                "exact",
+                "regex"
+            ]
+        },
         "response_selection": {
             "type": "string",
             "description": "Strategy for selecting response.",
@@ -108,7 +120,7 @@
                         },
                         "unauthorized_response": {
                             "$ref": "#/definitions/response"
-                        } 
+                        }
                     },
                     "required": ["method", "username", "password"],
                     "additionalProperties": false
@@ -130,7 +142,7 @@
                         },
                         "unauthorized_response": {
                             "$ref": "#/definitions/response"
-                        } 
+                        }
                     },
                     "required": ["method", "name", "value"],
                     "additionalProperties": false
@@ -148,7 +160,7 @@
                         },
                         "unauthorized_response": {
                             "$ref": "#/definitions/response"
-                        } 
+                        }
                     },
                     "required": ["method", "key"],
                     "additionalProperties": false
@@ -169,7 +181,7 @@
                         },
                         "unauthorized_response": {
                             "$ref": "#/definitions/response"
-                        } 
+                        }
                     },
                     "required": ["method", "fields"],
                     "additionalProperties": false
@@ -187,7 +199,7 @@
                         },
                         "unauthorized_response": {
                             "$ref": "#/definitions/response"
-                        } 
+                        }
                     },
                     "required": ["method", "token"],
                     "additionalProperties": false

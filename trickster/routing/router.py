@@ -114,13 +114,17 @@ class Route(IdItem):
         response_selection: ResponseSelectionStrategy,
         path: re.Pattern,
         auth: Auth,
-        method: str = 'GET'
+        method: str = 'GET',
+        body: str = None,
+        body_matching_method: str = 'exact',
     ):
         super().__init__(id)
         self.response_selection = response_selection
         self.method = method
         self.path = path
         self.auth = auth
+        self.body = body
+        self.body_matching_method = body_matching_method
         self.used_count = 0
         self.responses: IdList[RouteResponse] = IdList()
 
@@ -140,7 +144,9 @@ class Route(IdItem):
             'path': self.path.pattern,
             'used_count': self.used_count,
             'responses': self.responses.serialize(),
-            'is_active': self.is_active
+            'is_active': self.is_active,
+            'body': self.body,
+            'body_matching_method': self.body_matching_method,
         }
 
     def get_response(self, response_id: str) -> Optional[RouteResponse]:
@@ -186,6 +192,7 @@ class Route(IdItem):
         return all([
             self._match_method(request.method),
             self._match_path(request.path),
+            self._match_body(request.body),
             self.is_active
         ])
 
@@ -196,6 +203,26 @@ class Route(IdItem):
     def _match_path(self, path: str) -> bool:
         """Return True, if this requests path matches given InputRequest."""
         return bool(self.path.match(path))
+
+    def _match_body(self, body: str) -> bool:
+        """Return True, if this requests body matches given InputRequest."""
+        if self.body is None:
+            return True
+
+        matching_methods = {
+            'exact': self._match_body_exact,
+            'regex': self._match_body_regex,
+        }
+
+        return matching_methods[self.body_matching_method](body)
+
+    def _match_body_exact(self, body: str) -> bool:
+        """Return True, if this requests body matches given InputRequest."""
+        return self.body == body
+
+    def _match_body_regex(self, body: str) -> bool:
+        """Return True, if this requests body regex matches given InputRequest."""
+        return bool(re.match(self.body, body))
 
     def select_response(self) -> Optional[RouteResponse]:
         """Select response from list of responses."""

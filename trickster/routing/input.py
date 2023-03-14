@@ -25,37 +25,50 @@ HTTP_METHODS = [
 class IncomingRequest(abc.ABC):
     """Incoming request that can be validated or matched against routes."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def method(self) -> str:
         """HTTP method."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def path(self) -> str:
         """Path of the request: `http://domain.com/<path>?query`."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def headers(self) -> Dict[str, Any]:
         """Dictionary containing header name and value."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def args(self) -> Dict[str, Any]:
         """Dictionary containing URL arguments."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def url(self) -> str:
         """Full url of the request."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def query_string(self) -> str:
         """Query string of the request including ?: `http://domain.com/path<?query>`."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def form(self) -> Dict[str, Any]:
         """Dictionary containing form data."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def cookies(self) -> Dict[str, Any]:
         """Dictionary containing cookies."""
+
+    @property
+    @abc.abstractmethod
+    def body(self) -> str:
+        """Body of the request."""
 
 
 class IncomingFlaskRequest(IncomingRequest):
@@ -104,6 +117,11 @@ class IncomingFlaskRequest(IncomingRequest):
         """Dictionary containing cookies."""
         return self.request.cookies
 
+    @property
+    def body(self) -> str:
+        """Body of the request."""
+        return self.request.data.decode('utf-8')
+
 
 class IncomingTestRequest:
     """Model of a request used for testing route matching."""
@@ -115,7 +133,8 @@ class IncomingTestRequest:
         method: str,
         headers: Dict[str, str] = None,
         form: Dict[str, str] = None,
-        cookies: Dict[str, str] = None
+        cookies: Dict[str, str] = None,
+        body: str = ''
     ):
         self.url = urllib.parse.urljoin(base_url, full_path)
         self.parsed_url = urllib.parse.urlparse(self.url)
@@ -123,6 +142,7 @@ class IncomingTestRequest:
         self.headers = headers or {}
         self.form = form or {}
         self.cookies = cookies or {}
+        self.body = body
 
     @property
     def path(self) -> str:

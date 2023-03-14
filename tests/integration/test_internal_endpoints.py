@@ -26,6 +26,8 @@ class TestInternalEndpoints:
             'id': 'route_id',
             'path': '/path',
             'method': 'GET',
+            'body': None,
+            'body_matching_method': 'exact',
             'response_selection': 'greedy',
             'used_count': 0,
             'is_active': True,
@@ -50,6 +52,8 @@ class TestInternalEndpoints:
             'id': 'route_id',
             'path': '/endpoint',
             'method': 'GET',
+            'body': 'ok',
+            'body_matching_method': 'regex',
             'response_selection': 'random',
             'auth': {
                 'method': 'basic',
@@ -91,6 +95,8 @@ class TestInternalEndpoints:
             'id': 'route_id',
             'path': '/endpoint',
             'method': 'GET',
+            'body': 'ok',
+            'body_matching_method': 'regex',
             'response_selection': 'random',
             'used_count': 0,
             'is_active': True,
@@ -174,6 +180,8 @@ class TestInternalEndpoints:
                 'id': 'route_id1',
                 'path': '/endpoint1',
                 'method': 'GET',
+                'body': None,
+                'body_matching_method': 'exact',
                 'response_selection': 'greedy',
                 'used_count': 0,
                 'is_active': True,
@@ -196,6 +204,8 @@ class TestInternalEndpoints:
                 'id': 'route_id2',
                 'path': '/endpoint2',
                 'method': 'GET',
+                'body': None,
+                'body_matching_method': 'exact',
                 'response_selection': 'greedy',
                 'used_count': 0,
                 'is_active': True,
@@ -248,7 +258,7 @@ class TestInternalEndpoints:
 
         response = client.delete('/internal/routes/route1')
         assert response.status_code == 204
-        
+
         response = client.get('/internal/routes')
         assert response.status_code == 200
         assert response.json == []
@@ -283,6 +293,8 @@ class TestInternalEndpoints:
             'id': 'route1',
             'method': 'GET',
             'path': '/endpoint2',
+            'body': None,
+            'body_matching_method': 'exact',
             'response_selection': 'greedy',
             'responses': [
                 {
@@ -330,6 +342,8 @@ class TestInternalEndpoints:
             'auth': None,
             'id': 'route2',
             'method': 'GET',
+            'body': None,
+            'body_matching_method': 'exact',
             'path': '/endpoint2',
             'response_selection': 'greedy',
             'responses': [
@@ -450,6 +464,28 @@ class TestInternalEndpoints:
         assert response.status_code == 200
         assert response.json == {'response': 'data'}
 
+    def test_call_route_matching_body(self, client):
+        client.post('/internal/routes', json={
+            'id': 'route',
+            'path': '/endpoint',
+            'body': '^{"foo": "b.r"}$',
+            'body_matching_method': 'regex',
+            'responses': [
+                {
+                    'id': 'response',
+                    'body': {'response': 'data'}
+                }
+            ]
+        })
+
+        response = client.get('/endpoint', json={'foo': 'bar'})
+
+        assert response.status_code == 200
+        assert response.json == {'response': 'data'}
+
+        response = client.get('/endpoint', json={'foo': 'bar', 'baz': 'qux'})
+        assert response.status_code == 404
+
     def test_call_route_no_match(self, client):
         response = client.get('/endpoint')
 
@@ -529,6 +565,8 @@ class TestInternalEndpoints:
             'auth': None,
             'id': 'route_id',
             'method': 'GET',
+            'body': None,
+            'body_matching_method': 'exact',
             'path': '/endpoint',
             'response_selection': 'greedy',
             'responses': [
@@ -701,6 +739,8 @@ class TestInternalEndpoints:
             'id': 'route_id',
             'path': '/path',
             'method': 'GET',
+            'body': None,
+            'body_matching_method': 'exact',
             'response_selection': 'greedy',
             'used_count': 0,
             'is_active': True,

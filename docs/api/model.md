@@ -68,6 +68,27 @@ optional
 - Default `GET`.
 - Allowed values are `GET`, `HEAD`, `POST`, `PUT`, `DELETE` `CONNECT`, `OPTIONS`, `TRACE` and `PATCH`.
 
+### `body`
+<div markdown="1">
+optional
+{: .label .label-green }
+</div>
+
+- The body string content which the Route should match.
+- Default `null`.
+
+### `body_matching_method`
+<div markdown="1">
+optional
+{: .label .label-green }
+</div>
+
+- The method which the Route should match the body.
+- Default `exact`.
+- Allowed values are `exact`, `regex`.
+- When `exact` is used, the body must match the string exactly.
+- For `regex`, the body must match the regular expression.
+
 ### `id`
 
 <div markdown="1">
@@ -257,6 +278,8 @@ required
     "id": "universal_endpoint",
     "path": "/endpoint_\\w*",
     "method": "GET",
+    "body": "t.*t",
+    "body_matching_method": "regex",
     "auth": {
         "method": "basic",
         "username": "username",
