@@ -422,6 +422,20 @@ class TestRoute:
         )
         assert not route.match(request)
 
+    def test_match_body_regex_empty_body(self):
+        route = Route(
+            id='id1',
+            responses=[
+                RouteResponse('id1', '', Delay(), weight=0.4)
+            ],
+            response_selection=ResponseSelectionStrategy.random,
+            path=re.compile(r'/test.*'),
+            auth=NoAuth(),
+            method='GET',
+            body_matching_method='regex'
+        )
+        assert not route._match_body_regex('')
+
     def test_select_response(self):
         response = RouteResponse('id1', 'string', Delay())
         route = Route(

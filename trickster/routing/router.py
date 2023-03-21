@@ -222,6 +222,8 @@ class Route(IdItem):
 
     def _match_body_regex(self, body: str) -> bool:
         """Return True, if this requests body regex matches given InputRequest."""
+        if self.body is None:
+            return False
         return bool(re.match(self.body, body))
 
     def select_response(self) -> Optional[RouteResponse]:

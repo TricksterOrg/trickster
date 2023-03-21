@@ -17,7 +17,7 @@ def respond(path: str) -> Response:
     """Match request againts defined routes and return appropriet response."""
     incomming_request = IncomingFlaskRequest(request)
     try:
-        if route := current_app.user_router.match(incomming_request):
+        if route := current_app.user_router.match(incomming_request):  # type: ignore
             route.authenticate(incomming_request)
             response = route.select_response()
             route.use(response)

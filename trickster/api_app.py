@@ -38,7 +38,7 @@ class ApiApp(Flask):
 
     def _register_handlers(self) -> None:
         """Register error page handlers."""
-        self.register_error_handler(HTTPException, http_error_handler)
+        self.register_error_handler(HTTPException, http_error_handler)  # type: ignore
 
     def _register_blueprints(self) -> None:
         """Register api endpoints."""

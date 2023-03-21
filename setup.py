@@ -44,7 +44,6 @@ def main() -> None:
                 'setuptools',
                 'wheel',
                 'flake8',
-                'flake8-docstrings',
                 'flake8-pytest',
                 'flake8-eradicate',
                 'flake8-print',
@@ -54,7 +53,7 @@ def main() -> None:
                 'pytest-repeat',
                 'pytest-cov',
                 'pytest-mock',
-                'mypy',
+                'mypy==0.910',
                 'twine'
             ]
         },
