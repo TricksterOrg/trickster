@@ -1,0 +1,31 @@
+{
+	"internal_prefix": "/internal",
+	"openapi_boostrap": "openapi.yaml",
+	"logging": {
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+			"default": {
+				"()": "uvicorn.logging.DefaultFormatter",
+				"fmt": "%(levelprefix)s %(message)s",
+				"datefmt": "%Y-%m-%d %H:%M:%S"
+			}
+    },
+    "handlers": {
+			"default": {
+				"formatter": "default",
+				"class": "logging.StreamHandler",
+				"stream": "ext://sys.stderr"
+			}
+		},
+    "loggers": {
+			"trickster": {
+				"handlers": ["default"],
+				"level": "DEBUG"
+			},
+			"openapi_parser.builders.schema": {
+				"level": "ERROR"
+			}
+		}
+	}
+}

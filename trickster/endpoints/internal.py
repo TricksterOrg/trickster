@@ -1,105 +1,170 @@
-"""Internal API endpoints."""
+"""Internal endpoints used to manipulate Trickster."""
 
-from __future__ import annotations
+import uuid
 
-from flask import Blueprint, Response, abort, current_app, jsonify, make_response, request
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
 
-from trickster.routing import RouteConfigurationError
-from trickster.routing.input import IncomingTestRequest
-from trickster.validation import request_schema
-
-
-endpoints = Blueprint('internal_api', __name__)
+from trickster.schemas import HealthcheckStatus, InputRoute, InputResponse, InputResponseValidator
+from trickster.router import Router, Route, get_router, Response, ResponseValidator
 
 
-@endpoints.route('/reset', methods=['POST'])
-def reset() -> Response:
-    """Reset Routes to default."""
-    current_app.load_routes()
-    return make_response('', 204)
+router = APIRouter(
+    tags=['internal'],
+    responses={
+        404: {'description': 'Not found'}
+    }
+)
 
 
-@endpoints.route('/routes', methods=['GET'])
-def get_all_routes() -> Response:
-    """Get list of configured Routes."""
-    return jsonify(current_app.user_router.routes.serialize())
+@router.get('/healthcheck')
+def healthcheck() -> HealthcheckStatus:
+    """Get info about Trickster health."""
+    return HealthcheckStatus()
 
 
-@endpoints.route('/routes', methods=['POST'])
-@request_schema('route.schema.json')
-def add_route() -> Response:
+@router.get('/routes')
+def get_routes(mocked_router: Router = Depends(get_router)) -> list[Route]:
+    """Get list of all configured routes."""
+    return mocked_router.routes
+
+
+@router.get('/routes/{route_id}')
+def get_route(route_id: uuid.UUID, mocked_router: Router = Depends(get_router)) -> Route:
+    """Get route by its ID."""
+    if route := mocked_router.get_route_by_id(route_id):
+        return route
+    raise HTTPException(status_code=404, detail=f'Route ID "{route_id}" was not found.')
+
+
+@router.post('/routes')
+def create_route(route: InputRoute, mocked_router: Router = Depends(get_router)) -> Route:
     """Create new route."""
     try:
-        route = current_app.user_router.add_route(request.get_json())
-        return make_response(jsonify(route.serialize()), 201)
-    except RouteConfigurationError as error:
-        abort(error.http_code, str(error))
+        new_route = Route(**route.model_dump())
+        new_route.validate_existing_response_validator_combinations()
+        mocked_router.routes.append(new_route)
+        return new_route
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
 
 
-@endpoints.route('/routes', methods=['DELETE'])
-def remove_all_routes() -> Response:
-    """Reset router configuration."""
-    current_app.user_router.reset()
-    return make_response('', 204)
+@router.delete('/routes')
+def delete_routes(mocked_router: Router = Depends(get_router)) -> list[Route]:
+    """Remove all configured routes.
+
+    Removes also routes created from an openapi specification on startup.
+    """
+    mocked_router.routes = []
+    return mocked_router.routes
 
 
-@endpoints.route('/routes/<string:route_id>', methods=['GET'])
-def get_route(route_id: str) -> Response:
-    """Get route by id."""
-    if route := current_app.user_router.get_route(route_id):
-        return make_response(jsonify(route.serialize()), 200)
-    abort(404, f'Route id "{route_id}" does not exist.')
+@router.delete('/routes/{route_id}')
+def delete_route(route_id: uuid.UUID, mocked_router: Router = Depends(get_router)) -> list[Route]:
+    """Remove route by ID."""
+    if route := mocked_router.get_route_by_id(route_id):
+        mocked_router.routes.remove(route)
+        return mocked_router.routes
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
 
 
-@endpoints.route('/routes/<string:route_id>', methods=['PUT'])
-@request_schema('route.schema.json')
-def replace_route(route_id: str) -> Response:
-    """Replace route with new data."""
-    try:
-        route = current_app.user_router.update_route(request.get_json(), route_id)
-        return make_response(jsonify(route.serialize()), 201)
-    except RouteConfigurationError as error:
-        abort(error.http_code, str(error))
+@router.get('/routes/{route_id}/responses')
+def get_route_responses(route_id: uuid.UUID, mocked_router: Router = Depends(get_router)) -> list[Response]:
+    """Get list of all responses configured for a route."""
+    if route := mocked_router.get_route_by_id(route_id):
+        return route.responses
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
 
 
-@endpoints.route('/routes/<string:route_id>', methods=['DELETE'])
-def remove_route(route_id: str) -> Response:
-    """Remove route by id."""
-    if current_app.user_router.get_route(route_id):
-        current_app.user_router.remove_route(route_id)
-        return make_response('', 204)
-    abort(404, f'Route id "{route_id}" does not exist.')
+@router.delete('/routes/{route_id}/responses/{response_id}')
+def delete_route_response(
+    route_id: uuid.UUID, response_id: uuid.UUID, mocked_router: Router = Depends(get_router)
+) -> Route:
+    """Delete a route response."""
+    if route := mocked_router.get_route_by_id(route_id):
+        if response := route.get_response_by_id(response_id):
+            route.responses.remove(response)
+            return route
+        raise HTTPException(status_code=404, detail=f'Response "{response_id}" was not found in route "{route_id}".')
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
 
 
-@endpoints.route('/match_route', methods=['POST'])
-@request_schema('request.schema.json')
-def match_route() -> Response:
-    """Match configured routes against given request."""
-    payload = request.get_json()
-    incoming_request = IncomingTestRequest(
-        base_url=request.host_url,
-        full_path=payload['path'],
-        method=payload['method']
-    )
-
-    if route := current_app.user_router.match(incoming_request):
-        return make_response(jsonify(route.serialize()), 200)
-    abort(404, 'No route was matched.')
+@router.delete('/routes/{route_id}/responses')
+def delete_route_responses(route_id: uuid.UUID, mocked_router: Router = Depends(get_router)) -> Route:
+    """Delete all responses of a route."""
+    if route := mocked_router.get_route_by_id(route_id):
+        route.responses = []
+        return route
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
 
 
-@endpoints.route('/routes/<string:route_id>/responses', methods=['GET'])
-def get_all_responses(route_id: str) -> Response:
-    """Get all responses from given route."""
-    if route := current_app.user_router.get_route(route_id):
-        return make_response(jsonify(route.responses.serialize()), 200)
-    abort(404, f'Route id "{route_id}" does not exist.')
+@router.post('/routes/{route_id}/responses')
+def create_route_response(
+    route_id: uuid.UUID, response: InputResponse, mocked_router: Router = Depends(get_router)
+) -> Route:
+    """Create new response for a route."""
+    if route := mocked_router.get_route_by_id(route_id):
+        try:
+            new_response = Response(**response.model_dump())
+            route.validate_new_response(new_response)
+            route.responses.append(new_response)
+            return route
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
 
 
-@endpoints.route('/routes/<string:route_id>/responses/<string:response_id>', methods=['GET'])
-def get_response(route_id: str, response_id: str) -> Response:
-    """Get response by id from given route.."""
-    if route := current_app.user_router.get_route(route_id):
-        if response := route.get_response(response_id):
-            return make_response(jsonify(response.serialize()), 200)
-        abort(404, f'Response id "{response_id}" does not exist in request id "{route_id}".')
-    abort(404, f'Route id "{route_id}" does not exist.')
+@router.get('/routes/{route_id}/response_validators')
+def get_route_response_validators(
+    route_id: uuid.UUID, mocked_router: Router = Depends(get_router)
+) -> list[ResponseValidator]:
+    """Get validators configured for a route responses."""
+    if route := mocked_router.get_route_by_id(route_id):
+        return route.response_validators
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
+
+
+@router.delete('/routes/{route_id}/response_validators/{validator_id}')
+def delete_route_response_validator(
+    route_id: uuid.UUID, validator_id: uuid.UUID, mocked_router: Router = Depends(get_router)
+) -> Route:
+    """Remove validator configured for a route responses."""
+    if route := mocked_router.get_route_by_id(route_id):
+        if validator := route.get_response_validator_by_id(validator_id):
+            route.response_validators.remove(validator)
+            try:
+                route.validate_existing_response_validator_combinations()
+            except ValidationError as e:
+                route.response_validators.append(validator)
+                raise e
+            return route
+        raise HTTPException(
+            status_code=404,
+            detail=f'Response_validator "{validator_id}" was not found in route "{route_id}".'
+        )
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
+
+
+@router.delete('/routes/{route_id}/response_validators')
+def delete_route_response_validators(route_id: uuid.UUID, mocked_router: Router = Depends(get_router)) -> Route:
+    """Remove all validators configured for a route responses."""
+    if route := mocked_router.get_route_by_id(route_id):
+        route.response_validators = []
+        return route
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
+
+
+@router.post('/routes/{route_id}/response_validators')
+def create_route_response_validator(
+    route_id: uuid.UUID, validator: InputResponseValidator, mocked_router: Router = Depends(get_router)
+) -> Route:
+    """Create new validator for route responses."""
+    if route := mocked_router.get_route_by_id(route_id):
+        try:
+            new_validator = ResponseValidator(**validator.model_dump())
+            route.validate_new_response_validator(new_validator)
+            route.response_validators.append(new_validator)
+            return route
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
+    raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')

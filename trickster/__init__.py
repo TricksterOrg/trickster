@@ -1,5 +1,2 @@
-"""Trickster is a service providing REST API configurable by REST API."""
-
-
-class TricksterException(Exception):
-    """Exception from Trickster."""
+class TricksterError(Exception):
+    """Error within the Trickster app."""

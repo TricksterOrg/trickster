@@ -1,0 +1,210 @@
+components:
+  schemas:
+    CreateItemResult:
+      description: Result of command to create JD.
+      examples:
+      - status: OK
+      - status: ERROR
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ResponseStatus'
+          description: Result of creating the item.
+      required:
+      - status
+      title: CreateItemResult
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    Item:
+      description: Job Description Item.
+      examples:
+      - description: first example item
+        item_id: example_item_1
+        salary: 123
+        valid_from: '2022-12-28T23:55:59.342380'
+      - description: second example item
+        item_id: example_item_2
+        salary: 456
+        valid_from: '2023-11-21T18:33:11.000380'
+      properties:
+        description:
+          description: Description
+          title: Description
+          type: string
+        item_id:
+          description: Unique identifier
+          pattern: ^\w+$
+          title: Item Id
+          type: string
+        salary:
+          description: Offered salary
+          title: Salary
+          type: integer
+        valid_from:
+          description: Since when is offer valid
+          format: date-time
+          title: Valid From
+          type: string
+      required:
+      - item_id
+      - description
+      - salary
+      - valid_from
+      title: Item
+      type: object
+    ResponseStatus:
+      description: Status of a command.
+      enum:
+      - OK
+      - ERROR
+      title: ResponseStatus
+      type: string
+    SearchQuery:
+      description: Query to search items.
+      properties:
+        query:
+          description: Query to match items
+          title: Query
+          type: object
+        search_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          description: Unique identifier of results
+          title: Search Id
+        sorting:
+          description: Field to sort by
+          items:
+            type: string
+          title: Sorting
+          type: array
+      required:
+      - search_id
+      - query
+      - sorting
+      title: SearchQuery
+      type: object
+    SearchResult:
+      description: Result of search query.
+      examples:
+      - hits: 12
+        items:
+        - description: first example item
+          item_id: example_item_1
+          salary: 123
+          valid_from: '2022-12-28T23:55:59.342380'
+        - description: second example item
+          item_id: example_item_2
+          salary: 456
+          valid_from: '2023-11-21T18:33:11.000380'
+        search_id: a09d566a-9167-4204-800e-8de653490414
+      - hits: 0
+        items: []
+        search_id: 0e3b5048-3dc2-4f2a-aba7-61f0ecb47ca4
+      properties:
+        hits:
+          description: Number of items matching query
+          minimum: 0.0
+          title: Hits
+          type: integer
+        items:
+          description: Number of items found
+          items:
+            $ref: '#/components/schemas/Item'
+          title: Items
+          type: array
+        search_id:
+          description: Unique identifier of results
+          format: uuid
+          title: Search Id
+          type: string
+      required:
+      - items
+      - search_id
+      - hits
+      title: SearchResult
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  title: FastAPI
+  version: 0.1.0
+openapi: 3.1.0
+paths:
+  /items:
+    post:
+      operationId: create_item_items_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Item'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateItemResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create Item
+  /search:
+    post:
+      operationId: read_root_search_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchQuery'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/SearchResult'
+                title: Response Read Root Search Post
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Read Root

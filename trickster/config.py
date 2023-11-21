@@ -1,80 +1,77 @@
-"""Functionality for handling configuration."""
+"""Module provides the app config and all its sub-configs."""
 
+from __future__ import annotations
+
+import functools
 import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+import os
+import pathlib
 
-from trickster.sys import get_env
-from trickster.validation import validate_json
+import pydantic
+import pydantic_settings
+
+from trickster import TricksterError
+
+from typing import Any
 
 
-class Config:
-    """Flask configuration class.
+class ConfigError(TricksterError):
+    """Exception used when something went wrong with the handling of the app's configuration."""
 
-    To add new configuration value, add it to the Config instance either by using
-    `@property` decorator, class property or define it in constructor.
 
-    Only properties in uppercase will propagate to the app config:
-    https://flask.palletsprojects.com/en/1.1.x/config/#configuring-from-files
-    """
+@functools.cache
+def get_config() -> Config:
+    """Provide app config."""
+    return Config()
 
-    DEBUG = False
-    TESTING = False
-    DEFAULT_INTERNAL_PREFIX = '/internal'
-    DEFAULT_PORT = 8080
 
-    def __init__(
-        self,
-        internal_prefix: Optional[str] = None,
-        port: Optional[int] = None,
-        routes_path: Optional[str] = None
-    ):
-        self._internal_prefix = internal_prefix
-        self._port = port
-        self._routes_path = routes_path
+class Config(pydantic_settings.BaseSettings):
+    """A main app config."""
 
-    def _coalesce(self, *values: Any) -> Any:
-        """Return first value from all arguments that doesn't evaluate to None."""
-        for value in values:
-            if value is not None:
-                return value
+    model_config = pydantic_settings.SettingsConfigDict(env_nested_delimiter='__', env_file_encoding='utf-8')
 
-    @property
-    def INTERNAL_PREFIX(self) -> str:  # noqa: N802
-        """Get url prefix for configuration routes."""
-        return self._coalesce(
-            self._internal_prefix,
-            get_env('TRICKSTER_INTERNAL_PREFIX'),
-            self.DEFAULT_INTERNAL_PREFIX
-        )
+    internal_prefix: str = '/internal'
+    openapi_boostrap: pathlib.Path | None = None  # Not FilePath because we don't require the file to exist
+    logging: dict[str, Any] = {'version': 1}
 
-    @property
-    def PORT(self) -> int:  # noqa: N802
-        """Get port to which to bind."""
-        return int(self._coalesce(
-            self._port,
-            get_env('TRICKSTER_PORT'),
-            self.DEFAULT_PORT
-        ))
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[pydantic_settings.BaseSettings],
+        init_settings: pydantic_settings.PydanticBaseSettingsSource,
+        env_settings: pydantic_settings.PydanticBaseSettingsSource,
+        dotenv_settings: pydantic_settings.PydanticBaseSettingsSource,
+        file_secret_settings: pydantic_settings.PydanticBaseSettingsSource,
+    ) -> tuple[pydantic_settings.PydanticBaseSettingsSource, ...]:
+        """Add json config source."""
+        return init_settings, env_settings, dotenv_settings, JsonConfigSettingsSource(settings_cls)
 
-    @property
-    def ROUTES_PATH(self) -> Optional[Path]:  # noqa: N802
-        """Get path to json file containing default routes."""
-        if str_path := self._coalesce(self._routes_path, get_env('TRICKSTER_ROUTES')):
-            return Path(str_path)
-        return None
 
-    @property
-    def DEFAULT_ROUTES(self) -> List[Dict[str, Any]]:
-        """Get default routes."""
-        if path := self.ROUTES_PATH:
-            with path.open() as json_file:
-                routes = json.load(json_file)
-                self._validate_routes(routes)
-                return routes
-        return []
+class JsonConfigSettingsSource(pydantic_settings.PydanticBaseSettingsSource):
+    """A settings source class that loads variables from a JSON file."""
 
-    def _validate_routes(self, routes: List[Dict[str, Any]]) -> None:
-        """Validate default routes."""
-        for route in routes:
-            validate_json(route, 'route.schema.json')
+    config_path_var: str = 'TRICKSTER_CONF_PATH'
+    default_config_file_path: str = 'config.json'
+
+    def __init__(self, settings_cls: type[pydantic_settings.BaseSettings]):
+        super().__init__(settings_cls)
+        self.config_data: dict[str, Any] = self.load()
+
+    def load(self) -> dict[str, Any]:
+        """Load the config from given path."""
+        config_file_path = os.getenv(self.config_path_var, self.default_config_file_path)
+
+        try:
+            with open(config_file_path, 'rt') as config_file:  # noqa PTH123
+                return json.load(config_file)
+        except Exception as e:
+            raise ConfigError(f'Cannot load configuration file "{config_file_path}".') from e
+
+    def get_field_value(self, field: pydantic.fields.FieldInfo, field_name: str) -> tuple[Any, str, bool]:
+        """Get a field value from the configuration data."""
+        field_value = self.config_data.get(field_name)
+        return field_value, field_name, False
+
+    def __call__(self) -> dict[str, Any]:
+        """Serve the configuration data."""
+        return self.config_data
