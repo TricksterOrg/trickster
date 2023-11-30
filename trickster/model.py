@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 
 from typing import Any, Literal
 
+
 HitCounter = Annotated[int, Field(gte=0, default=0, description='Number of times route or response was used')]
 JsonBody = Annotated[dict | list, Field(description='Request or response body as a json')]
 PathParams = Annotated[dict[str, Any], Field(description='Parameter parsed from a route path')]
