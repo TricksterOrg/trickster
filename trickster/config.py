@@ -11,7 +11,9 @@ import pydantic
 import pydantic_settings
 
 from trickster import TricksterError
+
 from trickster.meta import project_root
+from trickster.model import InputResponse
 
 from typing import Any
 
@@ -23,7 +25,13 @@ class ConfigError(TricksterError):
 @functools.cache
 def get_config() -> Config:
     """Provide app config."""
-    return Config()
+    return Config()  # type: ignore[call-arg]
+
+
+class RuntimeSettings(pydantic.BaseModel):
+    """Configuration options that can be set either from config file or using internal endpoints."""
+
+    error_responses: list[InputResponse] = []
 
 
 class Config(pydantic_settings.BaseSettings):
@@ -34,6 +42,14 @@ class Config(pydantic_settings.BaseSettings):
     internal_prefix: str = '/internal'
     openapi_boostrap: pathlib.Path | None = None  # Not FilePath because we don't require the file to exist
     logging: dict[str, Any] = {'version': 1}
+    settings: RuntimeSettings = pydantic.Field(default_factory=RuntimeSettings)
+
+    def __hash__(self):
+        """Provide hash of a config.
+
+        This method is required so Config can be used as an argument in methods that use caching.
+        """
+        return hash(id(self))
 
     @classmethod
     def settings_customise_sources(

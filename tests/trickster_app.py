@@ -3,6 +3,7 @@ from fastapi import FastAPI
 
 from trickster.trickster_app import create_app, load_openapi_routes
 from trickster.router import get_router
+from trickster.config import get_config
 
 
 class TestCreateApp:
@@ -14,9 +15,9 @@ class TestLoadOpenapiRoutes:
 
     def test_load_openapi(self, mocked_openapi):
         load_openapi_routes()
-        assert len(get_router().routes) == 2
+        assert len(get_router(get_config()).routes) == 2
 
     @pytest.mark.parametrize('mocked_openapi', ['nonexistent.yaml'], indirect=True)
     def test_non_existent_openapi(self, mocked_openapi):
         load_openapi_routes()
-        assert get_router().routes == []
+        assert get_router(get_config()).routes == []

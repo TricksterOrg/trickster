@@ -5,7 +5,7 @@ import pathlib
 from openapi_parser import parse
 from openapi_parser import specification as openspec
 
-from trickster.router import Route, ResponseValidator
+from trickster.model import Route, ResponseValidator
 from trickster.utils import remove_none_values
 
 from typing import Self, Any, cast
