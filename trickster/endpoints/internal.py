@@ -1,12 +1,13 @@
 """Internal endpoints used to manipulate Trickster."""
-
+import http
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
-from trickster.schemas import HealthcheckStatus, InputRoute, InputResponse, InputResponseValidator
-from trickster.router import Router, Route, get_router, Response, ResponseValidator
+from trickster.model import HealthcheckStatus, InputRoute, InputResponse, InputResponseValidator
+from trickster.model import Route, Response, ResponseValidator
+from trickster.router import Router, get_router
 
 
 router = APIRouter(
@@ -26,7 +27,7 @@ def healthcheck() -> HealthcheckStatus:
 @router.get('/routes')
 def get_routes(mocked_router: Router = Depends(get_router)) -> list[Route]:
     """Get list of all configured routes."""
-    return mocked_router.routes
+    return mocked_router.get_routes()
 
 
 @router.get('/routes/{route_id}')
@@ -43,7 +44,7 @@ def create_route(route: InputRoute, mocked_router: Router = Depends(get_router))
     try:
         new_route = Route(**route.model_dump())
         new_route.validate_existing_response_validator_combinations()
-        mocked_router.routes.append(new_route)
+        mocked_router.add_route(new_route)
         return new_route
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
@@ -55,16 +56,16 @@ def delete_routes(mocked_router: Router = Depends(get_router)) -> list[Route]:
 
     Removes also routes created from an openapi specification on startup.
     """
-    mocked_router.routes = []
-    return mocked_router.routes
+    mocked_router.delete_routes()
+    return mocked_router.get_routes()
 
 
 @router.delete('/routes/{route_id}')
 def delete_route(route_id: uuid.UUID, mocked_router: Router = Depends(get_router)) -> list[Route]:
     """Remove route by ID."""
     if route := mocked_router.get_route_by_id(route_id):
-        mocked_router.routes.remove(route)
-        return mocked_router.routes
+        mocked_router.delete_route(route)
+        return mocked_router.get_routes()
     raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
 
 
@@ -168,3 +169,44 @@ def create_route_response_validator(
         except ValidationError as e:
             raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
     raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
+
+
+@router.get('/settings/error_responses')
+def get_error_responses(
+    status_code: http.HTTPStatus | None = None, mocked_router: Router = Depends(get_router)
+) -> list[Response]:
+    """Get list of all configured error response."""
+    return mocked_router.get_error_responses(status_code)
+
+
+@router.post('/settings/error_responses')
+def create_error_response(response: InputResponse, mocked_router: Router = Depends(get_router)) -> Response:
+    """Create new error response."""
+    try:
+        new_response = Response(**response.model_dump())
+        mocked_router.add_error_response(new_response)
+        return new_response
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
+
+
+@router.delete('/settings/error_responses')
+def delete_error_responses(
+    status_code: http.HTTPStatus | None = None, mocked_router: Router = Depends(get_router)
+) -> list[Response]:
+    """Remove all configured error responses or all error responses with given status_code if provided.
+
+    Removes also error responses created from configuration file on startup.
+    """
+    for error_response in mocked_router.get_error_responses(status_code):
+        mocked_router.delete_error_response(error_response)
+    return mocked_router.get_error_responses(status_code)
+
+
+@router.delete('/settings/error_responses/{response_id}')
+def delete_error_response(response_id: uuid.UUID, mocked_router: Router = Depends(get_router)) -> list[Response]:
+    """Remove error response by its ID."""
+    if error_response := mocked_router.get_error_response_by_id(response_id):
+        mocked_router.delete_error_response(error_response)
+        return mocked_router.get_error_responses()
+    raise HTTPException(status_code=404, detail=f'Error response "{error_response}" was not found.')

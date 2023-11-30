@@ -17,10 +17,18 @@ router = APIRouter(
 @router.api_route('/{path:path}', methods=http.HTTPMethod)  # type: ignore
 def mocked_response(request: Request, mocked_router: Router = Depends(get_router)) -> JSONResponse:
     """All-catching route that mocks client service."""
+    response = None
+
     if match := mocked_router.match(request):  # noqa: SIM102 - nested if statements
-        if response := match.route.get_response(match):
+        if matched_response := match.route.get_response(match):
             match.route.hits += 1
-            response.hits += 1
-            response.delay_response()
-            return response.as_fastapi_response()
-    raise HTTPException(status_code=404, detail='No route or response was found for your request.')
+            response = matched_response
+    elif error_response := mocked_router.get_error_response(status_code=http.HTTPStatus.NOT_FOUND):
+        response = error_response
+
+    if response is not None:
+        response.hits += 1
+        response.delay_response()
+        return response.as_fastapi_response()
+    else:
+        raise HTTPException(status_code=404, detail='No route or response was found for your request.')
