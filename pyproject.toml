@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "Trickster"
 description = "Trickster is a python service for mocking APIs."
-version = "2.0.0"
+version = "3.0.0"
 authors = ["Jakub Tesarek <jakub@tesarek.me>"]
 readme = "README.md"
 
@@ -50,7 +50,11 @@ max-complexity = 6
 
 [tool.poe.tasks.run]
 help = "Run Trickster"
-cmd = "uvicorn --factory trickster.trickster_app:create_app --reload"
+cmd = "docker-compose up"
+
+[tool.poe.tasks.build]
+help = "Build Trickster"
+cmd = "docker-compose build"
 
 [tool.poe.tasks.typing]
 help = "Run Mypy type checker"
