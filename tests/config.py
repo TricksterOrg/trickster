@@ -8,7 +8,30 @@ from trickster.config import Config, JsonConfigSettingsSource, ConfigError, get_
 
 
 config_data = {
-    'internal_prefix': '/int'
+    'internal_prefix': '/internal',
+    'logging': {
+        'disable_existing_loggers': False,
+        'formatters': {
+            'default': {
+                '()': 'uvicorn.logging.DefaultFormatter',
+                'datefmt': '%Y-%m-%d %H:%M:%S',
+                'fmt': '%(levelprefix)s %(message)s'
+            }
+        },
+        'handlers': {
+            'default': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'default',
+                'stream': 'ext://sys.stderr'
+            }
+        },
+        'loggers': {
+            'openapi_parser.builders.schema': {'level': 'ERROR'},
+            'trickster': {'handlers': ['default'], 'level': 'ERROR'}
+        },
+        'version': 1
+    },
+    'openapi_boostrap': 'openapi.yaml',
 }
 
 
@@ -48,7 +71,7 @@ class TestJsonConfigSettingsSource:
         config_source = JsonConfigSettingsSource(Config)
         assert config_source.get_field_value(
             pydantic.fields.FieldInfo(), 'internal_prefix'
-        ) == ('/int', 'internal_prefix', False)
+        ) == ('/internal', 'internal_prefix', False)
 
 
 class TestConfig:
