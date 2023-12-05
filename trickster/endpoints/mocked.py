@@ -22,7 +22,6 @@ def mocked_response(request: Request, mocked_router: Router = Depends(get_router
     if match := mocked_router.match(request):  # noqa: SIM102 - nested if statements
         try:
             match.route.authenticate(request)
-            print(match.route.model_dump())
             if matched_response := match.route.get_response(match):
                 match.route.hits += 1
                 response = matched_response
