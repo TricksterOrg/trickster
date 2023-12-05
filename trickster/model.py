@@ -12,12 +12,11 @@ import time
 
 import jsonschema
 from typing_extensions import Annotated
-from pydantic import BaseModel, Field, model_serializer, model_validator
-from fastapi import Request
+from pydantic import BaseModel, Field, model_serializer, model_validator, ConfigDict, field_validator, field_serializer
+from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from typing import Any, Literal
-
 
 HitCounter = Annotated[int, Field(gte=0, default=0, description='Number of times route or response was used')]
 JsonBody = Annotated[dict | list, Field(description='Request or response body as a json')]
@@ -239,6 +238,87 @@ class ResponseSelector(enum.Enum):
                 raise ValueError(f'Response selection algorithm for {self.value} is not configured.')
 
 
+class Auth(BaseModel):
+    """Base class for authentication."""
+
+    type: str
+    error_response: Response
+
+    model_config = ConfigDict(extra='allow')
+
+
+class CognitoBearerTokenAuth(Auth):
+    """Authentication using cognito access token in header."""
+
+    type: str = 'cognito'
+    token: str
+
+    def _get_header(self, request: Request) -> str:
+        """Get value of http header containing authentication token."""
+        header = request.headers.get('Authorization')
+        if not header:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Missing authentication header "Authorization".'
+            )
+        return header
+
+    def _get_token(self, header: str) -> str:
+        """Get authetication token from http header."""
+        match = re.match(r'Bearer (?P<token>.*)', header)
+        if not match:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f'Invalid authentication header {header}.'
+            )
+
+        return match['token']
+
+    def authenticate(self, request: Request) -> None:
+        """Check if Request contains valid token authentication, raise exception if not."""
+        header = self._get_header(request)
+        token = self._get_token(header)
+        if token != self.token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f'Authentication token {token} doens\'t match {self.token}.'
+            )
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CognitoBearerTokenAuth:
+        """Generate instance from dict."""
+        return cls(
+            type='cognito',
+            error_response=Response.model_validate(data['error_response']),
+            token=data['token']
+        )
+
+
+class ApiKeyAuth(Auth):
+    """Authentication using api key in header."""
+
+    type: str = 'apikey'
+    api_key: str
+
+    def authenticate(self, request: Request) -> None:
+        """Check if IncomingRequest contains valid token authentication, raise exception if not."""
+        api_key = request.headers.get('x-api-key')
+        if api_key != self.api_key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f'Authentication api key {api_key} doens\'t match {self.api_key}.'
+            )
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ApiKeyAuth:
+        """Generate instance from dict."""
+        return cls(
+            type='apikey',
+            error_response=Response.model_validate(data['error_response']),
+            api_key=data['api_key']
+        )
+
+
 class Route(BaseModel):
     """User-defined route that can match request and return a response."""
 
@@ -251,6 +331,7 @@ class Route(BaseModel):
     responses: list[Response] = Field(default_factory=list, description='Possible responses of the route')
     response_selector: ResponseSelector = Field(
         default=ResponseSelector.RANDOM, description='Strategy for response selection')
+    auth: Auth
 
     @model_validator(mode='after')  # type: ignore # github.com/python/mypy/issues/15620
     @classmethod
@@ -259,6 +340,20 @@ class Route(BaseModel):
         for response in route.responses:
             route.validate_new_response(response)
         return route
+
+    @field_validator('auth', mode='after')
+    @classmethod
+    def create_proper_auth(cls, auth: Auth) -> Auth:
+        """Instantiate proper authentication method."""
+        if type(auth) is Auth:
+            data_type = auth.type
+            for sub in Auth.__subclasses__():
+                if data_type == sub.model_fields['type'].default:
+                    proper_auth = sub.from_dict(auth.model_dump())
+                    return proper_auth
+            raise ValueError(f"Unsupported sub-type: {data_type}")
+        else:
+            return auth
 
     def validate_existing_response_validator_combinations(self):
         """Validate that all combinations of responses and their validators are valid."""
@@ -320,6 +415,15 @@ class Route(BaseModel):
                 return validator
         return None
 
+    def authenticate(self, request: Request) -> None:
+        """Check if request is properly authenticated."""
+        self.auth.authenticate(request)
+
+    @field_serializer('auth')
+    def serialize_auth(self, auth: Auth, _info) -> dict[str, Any]:
+        """Serialization of extra fields."""
+        return auth.model_dump()
+
 
 class HealthcheckStatus(BaseModel):
     """Healthcheck endpoint response schema."""
@@ -360,3 +464,4 @@ class InputRoute(BaseModel):
     http_methods: list[http.HTTPMethod] = [http.HTTPMethod.GET]
     response_validators: list[ResponseValidator] = []
     response_selector: ResponseSelector = ResponseSelector.RANDOM
+    auth: Auth

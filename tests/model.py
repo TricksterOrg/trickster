@@ -2,7 +2,7 @@ import http
 
 import pytest
 
-from trickster.model import ParametrizedPath, Response, Route
+from trickster.model import ParametrizedPath, Response, Route, CognitoBearerTokenAuth, ApiKeyAuth
 
 
 class TestParametrizedPath:
@@ -71,3 +71,44 @@ class TestRoute:
     def test_match_method_with_no_match(self):
         route = Route(path='test', responses=[], http_methods=[http.HTTPMethod.GET])
         assert route.match_method('POST') is None
+
+    @pytest.mark.parametrize('body, auth_model', [
+        ({
+            "path": "/test1",
+            "responses": [
+                {
+                    "status_code": 200,
+                    "body": {"test": "test"}
+                }
+            ],
+            "auth": {
+                "type": "apikey",
+                "api_key": "testkey",
+                "error_response": {
+                    "status_code": 400,
+                    "body": {"auth": "unauthorized"}
+                }
+            }
+        }, ApiKeyAuth),
+        ({
+            "path": "/test1",
+            "responses": [
+                {
+                    "status_code": 200,
+                    "body": {"test": "test"}
+                }
+            ],
+            "auth": {
+                "type": "cognito",
+                "token": "testtoken",
+                "error_response": {
+                    "status_code": 400,
+                    "body": {"auth": "unauthorized"}
+                }
+            }
+        }, CognitoBearerTokenAuth)
+    ])
+    def test_create_proper_auth(self, body, auth_model):
+        """Test route will create proper auth method."""
+        route = Route.model_validate(body)
+        assert isinstance(route.auth, auth_model)
