@@ -1,5 +1,6 @@
 """Trickster application."""
 
+import uvicorn
 from fastapi import FastAPI
 
 from trickster.endpoints import internal, mocked
@@ -37,3 +38,13 @@ def create_app() -> FastAPI:
 
     load_openapi_routes()
     return app
+
+
+def main() -> None:
+    """Run Trickster application."""
+    app = create_app()
+    uvicorn.run(app, host='0.0.0.0', port=8080)
+
+
+if __name__ == '__main__':
+    main()
