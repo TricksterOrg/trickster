@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "Trickster"
 description = "Trickster is a python service for mocking APIs."
-version = "3.0.0rc3"
+version = "3.0.0rc4"
 authors = ["Jakub Tesarek <jakub@tesarek.me>"]
 readme = "README.md"
 include = ["pyproject.toml", "README.md", "config.json"]
