@@ -13,8 +13,9 @@ import time
 import jsonschema
 from typing_extensions import Annotated
 from pydantic import BaseModel, Field, model_serializer, model_validator, ConfigDict, field_validator, field_serializer
-from fastapi import Request, HTTPException, status
+from fastapi import Request
 from fastapi.responses import JSONResponse
+from trickster.exceptions import AuthenticationError
 
 from typing import Any, Literal
 
@@ -127,8 +128,10 @@ class ResponseValidator(BaseModel):
             raise ValueError('Route response validation failed.')
         try:
             jsonschema.validate(response.body, self.json_schema)
-        except jsonschema.exceptions.ValidationError:
-            raise ValueError('JsonSchema validation failed.')
+        except jsonschema.exceptions.ValidationError as exception:
+            raise ValueError(f'JsonSchema validation failed with message {exception.message} on instance {exception.instance}')
+        except jsonschema.exceptions.SchemaError as exception:
+            raise ValueError(f'JsonSchema validation failed: {exception.message}')
 
 
 class RouteMatch(BaseModel):
@@ -257,20 +260,14 @@ class CognitoBearerTokenAuth(Auth):
         """Get value of http header containing authentication token."""
         header = request.headers.get('Authorization')
         if not header:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Missing authentication header "Authorization".'
-            )
+            raise AuthenticationError('Missing authentication header "Authorization".')
         return header
 
     def _get_token(self, header: str) -> str:
         """Get authetication token from http header."""
         match = re.match(r'Bearer (?P<token>.*)', header)
         if not match:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f'Invalid authentication header {header}.'
-            )
+            raise AuthenticationError(f'Invalid authentication header {header}.')
 
         return match['token']
 
@@ -279,10 +276,7 @@ class CognitoBearerTokenAuth(Auth):
         header = self._get_header(request)
         token = self._get_token(header)
         if token != self.token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f'Authentication token {token} doens\'t match {self.token}.'
-            )
+            raise AuthenticationError(f'Authentication token {token} doens\'t match {self.token}.')
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CognitoBearerTokenAuth:
@@ -304,10 +298,7 @@ class ApiKeyAuth(Auth):
         """Check if IncomingRequest contains valid token authentication, raise exception if not."""
         api_key = request.headers.get('x-api-key')
         if api_key != self.api_key:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f'Authentication api key {api_key} doens\'t match {self.api_key}.'
-            )
+            raise AuthenticationError(f'Authentication api key {api_key} doens\'t match {self.api_key}.')
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ApiKeyAuth:
