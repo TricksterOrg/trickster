@@ -247,10 +247,6 @@ class Auth(BaseModel):
 
     model_config = ConfigDict(extra='allow')
 
-    @abc.abstractmethod
-    def authenticate(self, requst: Response) -> None:
-        """Implement authentication method."""
-
 
 class CognitoBearerTokenAuth(Auth):
     """Authentication using cognito access token in header."""
