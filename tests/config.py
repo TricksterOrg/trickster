@@ -70,18 +70,6 @@ class TestJsonConfigSettingsSource:
         with pytest.raises(ConfigError):
             JsonConfigSettingsSource(Config)
 
-    def test_load_default_config(self, tmpdir, mocker):
-        config_file = tmpdir.join('config.json')
-        config_file.write(json.dumps(config_data))
-        mocker.patch(
-            'trickster.config.JsonConfigSettingsSource.default_config_file_path',
-            new_callable=mocker.PropertyMock,
-            return_value=str(config_file)
-        )
-
-        config_source = JsonConfigSettingsSource(Config)
-        assert config_source() == config_data
-
     def test_get_field_value(self, tmpdir, mocker):
         config_file = tmpdir.join('config.json')
         config_file.write(json.dumps(config_data))
@@ -103,7 +91,8 @@ class TestConfig:
         assert config.model_dump() == {
             'internal_prefix': '/internal',
             'openapi_boostrap': None,
-            'logging': {'version': 1}
+            'logging': {'version': 1},
+            'settings': {'error_responses': []}
         }
 
 

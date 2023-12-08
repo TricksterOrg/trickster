@@ -10,7 +10,6 @@ from trickster.config import get_config
 from trickster.meta import project_root
 from trickster.router import get_router
 
-
 mocked_files_path = project_root / 'tests/mocked_files'
 
 

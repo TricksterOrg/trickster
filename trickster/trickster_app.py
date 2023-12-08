@@ -17,7 +17,7 @@ def load_openapi_routes() -> None:
     if spec_path := get_config().openapi_boostrap:
         try:
             spec = OpenApiSpec.load(spec_path)
-            get_router().routes = spec.get_routes()
+            get_router(get_config()).routes = spec.get_routes()
             logger.warning(f'Loaded OpenApi specification "{spec_path}".')
         except FileNotFoundError:
             logger.warning(f'OpenApi specification "{spec_path}" was not loaded.')
