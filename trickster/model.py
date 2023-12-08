@@ -248,6 +248,7 @@ class Auth(BaseModel):
 
     def authenticate(self, request: Request) -> None:
         """Implement authenticate method in subclass."""
+        raise NotImplementedError('Implement this method in child class.')
 
 
 class CognitoBearerTokenAuth(Auth):
