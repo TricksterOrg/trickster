@@ -325,7 +325,7 @@ class Route(BaseModel):
     responses: list[Response] = Field(default_factory=list, description='Possible responses of the route')
     response_selector: ResponseSelector = Field(
         default=ResponseSelector.RANDOM, description='Strategy for response selection')
-    auth: Auth
+    auth: Auth | None = Field(default=None, description='Authentication method')
 
     @model_validator(mode='after')  # type: ignore # github.com/python/mypy/issues/15620
     @classmethod
@@ -337,17 +337,20 @@ class Route(BaseModel):
 
     @field_validator('auth', mode='after')
     @classmethod
-    def create_proper_auth(cls, auth: Auth) -> Auth:
+    def create_proper_auth(cls, auth: Auth) -> Auth | None:
         """Instantiate proper authentication method."""
-        if type(auth) is Auth:
-            data_type = auth.type
-            for sub in Auth.__subclasses__():
-                if data_type == sub.model_fields['type'].default:
-                    proper_auth = sub.from_dict(auth.model_dump())
-                    return proper_auth
-            raise ValueError(f"Unsupported sub-type: {data_type}")
+        if auth is not None:
+            if type(auth) is Auth:
+                data_type = auth.type
+                for sub in Auth.__subclasses__():
+                    if data_type == sub.model_fields['type'].default:
+                        proper_auth = sub.from_dict(auth.model_dump())
+                        return proper_auth
+                raise ValueError(f"Unsupported sub-type: {data_type}")
+            else:
+                return auth
         else:
-            return auth
+            return None
 
     def validate_existing_response_validator_combinations(self):
         """Validate that all combinations of responses and their validators are valid."""
@@ -411,7 +414,8 @@ class Route(BaseModel):
 
     def authenticate(self, request: Request) -> None:
         """Check if request is properly authenticated."""
-        self.auth.authenticate(request)
+        if self.auth is not None:
+            self.auth.authenticate(request)
 
     @field_serializer('auth')
     def serialize_auth(self, auth: Auth, _info) -> dict[str, Any]:
@@ -458,4 +462,4 @@ class InputRoute(BaseModel):
     http_methods: list[http.HTTPMethod] = [http.HTTPMethod.GET]
     response_validators: list[ResponseValidator] = []
     response_selector: ResponseSelector = ResponseSelector.RANDOM
-    auth: Auth
+    auth: Auth | None
