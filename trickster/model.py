@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import abc
 import enum
 import http
 import functools
@@ -248,6 +249,10 @@ class Auth(BaseModel):
     error_response: Response
 
     model_config = ConfigDict(extra='allow')
+
+    @abc.abstractmethod
+    def authenticate(self, requst: Response) -> None:
+        """Implement authentication method."""
 
 
 class CognitoBearerTokenAuth(Auth):
