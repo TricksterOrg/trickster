@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import abc
 import enum
 import http
 import functools
@@ -249,6 +248,9 @@ class Auth(BaseModel):
     error_response: Response
 
     model_config = ConfigDict(extra='allow')
+
+    def authenticate(self, request: Request) -> None:
+        """Implement authenticate method in subclass."""
 
 
 class CognitoBearerTokenAuth(Auth):
