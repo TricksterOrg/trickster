@@ -82,7 +82,7 @@ class TestRoute:
                 }
             ],
             "auth": {
-                "type": "token",
+                "method": "token",
                 "token": "testtoken",
                 "error_response": {
                     "status_code": 400,

@@ -307,7 +307,7 @@ class Route(BaseModel):
     responses: list[Response] = Field(default_factory=list, description='Possible responses of the route')
     response_selector: ResponseSelector = Field(
         default=ResponseSelector.RANDOM, description='Strategy for response selection')
-    auth: Union[Auth.get_subclasses()] = Field(discriminator='method')
+    auth: Union[Auth.get_subclasses()] | None = Field(default=None, discriminator='method')
 
     @model_validator(mode='after')  # type: ignore # github.com/python/mypy/issues/15620
     @classmethod
@@ -422,4 +422,4 @@ class InputRoute(BaseModel):
     http_methods: list[http.HTTPMethod] = [http.HTTPMethod.GET]
     response_validators: list[ResponseValidator] = []
     response_selector: ResponseSelector = ResponseSelector.RANDOM
-    auth: Union[Auth.get_subclasses()] = Field(discriminator='method')
+    auth: Union[Auth.get_subclasses()] | None = Field(discriminator='method')
