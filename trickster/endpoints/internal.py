@@ -5,9 +5,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
-from trickster.model import (
-    HealthcheckStatus, InputRoute, InputResponse, InputResponseValidator, Route, Response, ResponseValidator
-)
+from trickster.model import HealthcheckStatus, InputRoute, InputResponse, InputResponseValidator
+from trickster.model import Route, Response, ResponseValidator
 from trickster.router import Router, get_router
 
 
