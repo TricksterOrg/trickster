@@ -286,7 +286,7 @@ class TokenAuth(Auth):
         header = self._get_header(request)
         token = self._get_token(header)
         if token != self.token:
-            raise AuthenticationError(f'Authentication token {token} doens\'t match {self.token}.')
+            raise AuthenticationError(f'Authentication token {token} doesn\'t match {self.token}.')
 
 
 class Route(BaseModel):
