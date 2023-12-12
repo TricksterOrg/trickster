@@ -3,7 +3,6 @@ import http
 import uuid
 
 import pydantic
-
 from fastapi import APIRouter, Depends
 
 from trickster.model import HealthcheckStatus, InputRoute, InputResponse, InputResponseValidator

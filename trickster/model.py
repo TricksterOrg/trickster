@@ -12,6 +12,7 @@ import time
 
 import jsonschema
 from typing_extensions import Annotated
+
 from pydantic import BaseModel, Field, model_serializer, model_validator, ConfigDict, field_validator, field_serializer
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -254,10 +255,10 @@ class Auth(BaseModel):
         raise NotImplementedError('Implement this method in child class.')
 
 
-class CognitoBearerTokenAuth(Auth):
+class TokenAuth(Auth):
     """Authentication using cognito access token in header."""
 
-    type: str = 'cognito'
+    type: str = 'token'
     token: str
 
     def _get_header(self, request: Request) -> str:
@@ -283,34 +284,12 @@ class CognitoBearerTokenAuth(Auth):
             raise AuthenticationError(f'Authentication token {token} doens\'t match {self.token}.')
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> CognitoBearerTokenAuth:
+    def from_dict(cls, data: dict[str, Any]) -> TokenAuth:
         """Generate instance from dict."""
         return cls(
-            type='cognito',
+            type='token',
             error_response=Response.model_validate(data['error_response']),
             token=data['token']
-        )
-
-
-class ApiKeyAuth(Auth):
-    """Authentication using api key in header."""
-
-    type: str = 'apikey'
-    api_key: str
-
-    def authenticate(self, request: Request) -> None:
-        """Check if IncomingRequest contains valid token authentication, raise exception if not."""
-        api_key = request.headers.get('x-api-key')
-        if api_key != self.api_key:
-            raise AuthenticationError(f'Authentication api key {api_key} doens\'t match {self.api_key}.')
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> ApiKeyAuth:
-        """Generate instance from dict."""
-        return cls(
-            type='apikey',
-            error_response=Response.model_validate(data['error_response']),
-            api_key=data['api_key']
         )
 
 
@@ -347,7 +326,7 @@ class Route(BaseModel):
                     if data_type == sub.model_fields['type'].default:
                         proper_auth = sub.from_dict(auth.model_dump())
                         return proper_auth
-                raise ValueError(f"Unsupported sub-type: {data_type}")
+                raise ValueError(f"Unsupported authentication type: {data_type}")
             else:
                 return auth
         else:

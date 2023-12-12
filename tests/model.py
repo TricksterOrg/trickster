@@ -2,7 +2,7 @@ import http
 
 import pytest
 
-from trickster.model import ParametrizedPath, Response, Route, CognitoBearerTokenAuth, ApiKeyAuth
+from trickster.model import ParametrizedPath, Response, Route, TokenAuth
 
 
 class TestParametrizedPath:
@@ -82,31 +82,14 @@ class TestRoute:
                 }
             ],
             "auth": {
-                "type": "apikey",
-                "api_key": "testkey",
-                "error_response": {
-                    "status_code": 400,
-                    "body": {"auth": "unauthorized"}
-                }
-            }
-        }, ApiKeyAuth),
-        ({
-            "path": "/test1",
-            "responses": [
-                {
-                    "status_code": 200,
-                    "body": {"test": "test"}
-                }
-            ],
-            "auth": {
-                "type": "cognito",
+                "type": "token",
                 "token": "testtoken",
                 "error_response": {
                     "status_code": 400,
                     "body": {"auth": "unauthorized"}
                 }
             }
-        }, CognitoBearerTokenAuth)
+        }, TokenAuth)
     ])
     def test_create_proper_auth(self, body, auth_model):
         """Test route will create proper auth method."""
