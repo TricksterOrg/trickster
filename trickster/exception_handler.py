@@ -1,4 +1,5 @@
 """Handlers for HTTP errors."""
+import functools
 
 import fastapi
 import jsonschema
@@ -8,44 +9,37 @@ from typing import Any, Callable, Coroutine
 from trickster.exceptions import ValidationError, AuthenticationError, ResourceNotFoundError
 
 
-async def handle_validation_error(
-    request: fastapi.Request, exception: Exception
+async def handle_general_json_error(
+    request: fastapi.Request,
+    exception: Exception,
+    reason: str,
+    status_code: int,
 ) -> fastapi.responses.Response:
-    """Handle validation error."""
+    """Return error response."""
     return fastapi.responses.JSONResponse(
         {
-            'error': 'Validation error',
+            'error': reason,
             'reason': str(exception)
         },
-        status_code=fastapi.status.HTTP_400_BAD_REQUEST
+        status_code=status_code
     )
 
 
-async def handle_authentication_error(
-    request: fastapi.Request, exception: Exception
-) -> fastapi.responses.Response:
-    """Handle validation error."""
-    return fastapi.responses.JSONResponse(
-        {
-            'error': 'Authentication error',
-            'reason': str(exception)
-        },
-        status_code=fastapi.status.HTTP_401_UNAUTHORIZED
-    )
-
-
-async def handle_resource_not_found_error(
-    request: fastapi.Request, exception: Exception
-) -> fastapi.responses.Response:
-    """Handle validation error."""
-    return fastapi.responses.JSONResponse(
-        {
-            'error': 'Resource error',
-            'reason': str(exception)
-        },
-        status_code=fastapi.status.HTTP_404_NOT_FOUND
-    )
-
+handle_validation_error = functools.partial(
+    handle_general_json_error,
+    reason='Validation error',
+    status_code=fastapi.status.HTTP_400_BAD_REQUEST
+)
+handle_authentication_error = functools.partial(
+    handle_general_json_error,
+    reason='Authentication error',
+    status_code=fastapi.status.HTTP_401_UNAUTHORIZED
+)
+handle_resource_not_found_error = functools.partial(
+    handle_general_json_error,
+    reason='Resource error',
+    status_code=fastapi.status.HTTP_404_NOT_FOUND
+)
 
 request_error_handlers: dict[
     int | type[Exception],
