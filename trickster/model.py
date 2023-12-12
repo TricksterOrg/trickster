@@ -252,7 +252,7 @@ class Auth(BaseModel, abc.ABC):
         """Implement authenticate method in subclass."""
 
     @classmethod
-    def get_subclasses(cls) -> tuple[Type[Auth]]:
+    def get_subclasses(cls) -> tuple[type[Auth], ...]:
         """Return subclasses of base authentication model."""
         return tuple(cls.__subclasses__())
 
@@ -260,7 +260,7 @@ class Auth(BaseModel, abc.ABC):
 class TokenAuth(Auth):
     """Authentication using cognito access token in header."""
 
-    method: Literal['token'] = 'token'
+    method: Literal['token'] = 'token'  # type: ignore
     token: str
 
     def _get_header(self, request: Request) -> str:
@@ -307,7 +307,7 @@ class Route(BaseModel):
     responses: list[Response] = Field(default_factory=list, description='Possible responses of the route')
     response_selector: ResponseSelector = Field(
         default=ResponseSelector.RANDOM, description='Strategy for response selection')
-    auth: Union[Auth.get_subclasses()] | None = Field(default=None, discriminator='method')
+    auth: Union[Auth.get_subclasses()] | None = Field(default=None, discriminator='method')  # type: ignore
 
     @model_validator(mode='after')  # type: ignore # github.com/python/mypy/issues/15620
     @classmethod
@@ -422,4 +422,4 @@ class InputRoute(BaseModel):
     http_methods: list[http.HTTPMethod] = [http.HTTPMethod.GET]
     response_validators: list[ResponseValidator] = []
     response_selector: ResponseSelector = ResponseSelector.RANDOM
-    auth: Union[Auth.get_subclasses()] | None = Field(discriminator='method')
+    auth: Union[Auth.get_subclasses()] | None = Field(discriminator='method')  # type: ignore
