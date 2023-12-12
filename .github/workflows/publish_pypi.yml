@@ -6,22 +6,24 @@ on:
 
 jobs:
   deploy:
+
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Install poetry
-      run: pip install poetry  # poetry needs to exists before setup-python action
+    - uses: actions/checkout@v2
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v2
       with:
         python-version: '3.11'
-        cache: 'poetry'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install poetry
-        poetry install
+        python -m pip install ".[dev]"
     - name: Build and publish
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        PACKAGE_VERSION: ${{ github.event.release.tag_name }}
       run: |
-        poetry build
-        poetry publish --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }}
+        python setup.py sdist bdist_wheel
+        twine upload dist/*

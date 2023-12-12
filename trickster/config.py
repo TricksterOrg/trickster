@@ -11,7 +11,6 @@ import pydantic
 import pydantic_settings
 
 from trickster import TricksterError
-from trickster.meta import project_root
 from trickster.model import InputResponse
 
 from typing import Any
@@ -73,17 +72,9 @@ class JsonConfigSettingsSource(pydantic_settings.PydanticBaseSettingsSource):
         super().__init__(settings_cls)
         self.config_data: dict[str, Any] = self.load()
 
-    def _resolve_file_path(self) -> str:
-        config_file_path = os.getenv(self.config_path_var, self.default_config_file_path)
-
-        if not config_file_path.startswith('/'):
-            return str(project_root / config_file_path)
-
-        return config_file_path
-
     def load(self) -> dict[str, Any]:
         """Load the config from given path."""
-        config_file_path = self._resolve_file_path()
+        config_file_path = os.getenv(self.config_path_var, self.default_config_file_path)
 
         try:
             with open(config_file_path, 'rt') as config_file:  # noqa PTH123
