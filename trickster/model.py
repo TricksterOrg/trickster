@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, model_serializer, model_validator, Config
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from typing import Any, Literal, Union, Type
+from typing import Any, Literal, Union
 
 HitCounter = Annotated[int, Field(gte=0, default=0, description='Number of times route or response was used')]
 JsonBody = Annotated[dict | list, Field(description='Request or response body as a json')]
