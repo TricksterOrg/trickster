@@ -14,6 +14,8 @@ from trickster import TricksterError
 
 from typing import Any
 
+from trickster.model import InputResponse
+
 
 class ConfigError(TricksterError):
     """Exception used when something went wrong with the handling of the app's configuration."""
