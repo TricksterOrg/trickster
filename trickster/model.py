@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, model_serializer, model_validator, Config
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from typing import Any, Literal, Union
+from typing import Any, Literal, Union, Type
 
 HitCounter = Annotated[int, Field(gte=0, default=0, description='Number of times route or response was used')]
 JsonBody = Annotated[dict | list, Field(description='Request or response body as a json')]
@@ -252,7 +252,7 @@ class Auth(BaseModel, abc.ABC):
         """Implement authenticate method in subclass."""
 
     @classmethod
-    def get_subclasses(cls):
+    def get_subclasses(cls) -> tuple[Type[Auth]]:
         """Return subclasses of base authentication model."""
         return tuple(cls.__subclasses__())
 
