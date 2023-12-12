@@ -14,11 +14,11 @@ import time
 import jsonschema
 from typing_extensions import Annotated
 from pydantic import BaseModel, Field, model_serializer, model_validator, ConfigDict
-from fastapi import Request, HTTPException, status
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from trickster.exceptions import AuthenticationError
 
-from typing import Any, Literal, Union, Type
+from typing import Any, Literal, Union
 
 HitCounter = Annotated[int, Field(gte=0, default=0, description='Number of times route or response was used')]
 JsonBody = Annotated[dict | list, Field(description='Request or response body as a json')]
