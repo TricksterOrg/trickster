@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import abc
 import enum
 import http
 import functools
@@ -16,8 +17,7 @@ from pydantic import BaseModel, Field, model_serializer, model_validator, field_
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from typing import Any, Literal
-
+from typing import Any, Literal, Union
 
 HitCounter = Annotated[int, Field(gte=0, default=0, description='Number of times route or response was used')]
 JsonBody = Annotated[dict | list, Field(description='Request or response body as a json')]
@@ -238,23 +238,29 @@ class ResponseSelector(enum.Enum):
             case _:
                 raise ValueError(f'Response selection algorithm for {self.value} is not configured.')
 
-class Auth(BaseModel):
+
+class Auth(BaseModel, abc.ABC):
     """Base class for authentication."""
 
-    type: str
-    error_response: Response
+    method: Literal['auth'] = 'auth'
+    error_response: Response | None
 
     model_config = ConfigDict(extra='allow')
 
+    @abc.abstractmethod
     def authenticate(self, request: Request) -> None:
         """Implement authenticate method in subclass."""
-        raise NotImplementedError('Implement this method in child class.')
+
+    @classmethod
+    def get_subclasses(cls):
+        """Return subclasses of base authentication model."""
+        return tuple(cls.__subclasses__())
 
 
 class TokenAuth(Auth):
     """Authentication using cognito access token in header."""
 
-    type: str = 'token'
+    method: Literal['token'] = 'token'
     token: str
 
     def _get_header(self, request: Request) -> str:
@@ -288,15 +294,6 @@ class TokenAuth(Auth):
                 detail=f'Authentication token {token} doens\'t match {self.token}.'
             )
 
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> TokenAuth:
-        """Generate instance from dict."""
-        return cls(
-            type='token',
-            error_response=Response.model_validate(data['error_response']),
-            token=data['token']
-        )
-
 
 class Route(BaseModel):
     """User-defined route that can match request and return a response."""
@@ -310,24 +307,7 @@ class Route(BaseModel):
     responses: list[Response] = Field(default_factory=list, description='Possible responses of the route')
     response_selector: ResponseSelector = Field(
         default=ResponseSelector.RANDOM, description='Strategy for response selection')
-    auth: Auth | None = Field(default=None, description='Authentication method')
-
-    @field_validator('auth', mode='after')
-    @classmethod
-    def create_proper_auth(cls, auth: Auth) -> Auth | None:
-        """Instantiate proper authentication method."""
-        if auth is not None:
-            if type(auth) is Auth:
-                data_type = auth.type
-                for sub in Auth.__subclasses__():
-                    if data_type == sub.model_fields['type'].default:
-                        proper_auth = sub.from_dict(auth.model_dump())
-                        return proper_auth
-                raise ValueError(f"Unsupported authentication type: {data_type}")
-            else:
-                return auth
-        else:
-            return None
+    auth: Union[Auth.get_subclasses()] = Field(discriminator='method')
 
     @model_validator(mode='after')  # type: ignore # github.com/python/mypy/issues/15620
     @classmethod
@@ -397,10 +377,10 @@ class Route(BaseModel):
                 return validator
         return None
 
-    @field_serializer('auth')
-    def serialize_auth(self, auth: Auth, _info) -> dict[str, Any]:
-        """Serialization of extra fields."""
-        return auth.model_dump()
+    def authenticate(self, request: Request) -> None:
+        """Check if request is properly authenticated."""
+        if self.auth is not None:
+            self.auth.authenticate(request)
 
 
 class HealthcheckStatus(BaseModel):
@@ -442,4 +422,4 @@ class InputRoute(BaseModel):
     http_methods: list[http.HTTPMethod] = [http.HTTPMethod.GET]
     response_validators: list[ResponseValidator] = []
     response_selector: ResponseSelector = ResponseSelector.RANDOM
-    auth: Auth | None
+    auth: Union[Auth.get_subclasses()] = Field(discriminator='method')
