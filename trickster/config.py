@@ -11,7 +11,6 @@ import pydantic
 import pydantic_settings
 
 from trickster import TricksterError
-from trickster.model import InputResponse
 
 from typing import Any
 
