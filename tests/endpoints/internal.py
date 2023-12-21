@@ -296,7 +296,6 @@ class TestInternalEndpoints:
         # assert client.get(f'/internal/settings/error_responses').json() == []
 
     def test_delete_error_response(self, client):
-        data = {'status_code': http.HTTPStatus.NOT_FOUND, 'body': {'detail': 'Did not found'}}
         response = client.post(f'/internal/settings/error_responses', json=self.payload_error_response)
         error_response_id = response.json()['id']
 
