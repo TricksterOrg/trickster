@@ -1,5 +1,6 @@
 import os
 import pathlib
+import http
 
 import pytest
 
@@ -9,6 +10,7 @@ from trickster.trickster_app import create_app
 from trickster.config import get_config
 from trickster.meta import project_root
 from trickster.router import get_router
+from trickster.model import Route
 
 mocked_files_path = project_root / 'tests/mocked_files'
 
@@ -20,6 +22,40 @@ def mocked_config(mocker, request):
     mocker.patch.dict(os.environ, {'TRICKSTER_CONF_PATH': str(file_path_arg)})
     yield get_config()
     get_config.cache_clear()
+
+
+@pytest.fixture(scope='function')
+def mocked_empty_router():
+    get_router().cache_clear()
+    yield get_router()
+    get_router().cache_clear()
+
+@pytest.fixture(scope='function')
+def mocked_router(mocked_openapi, mocked_config):
+    route = Route(**{
+        'path': '/users',
+        'responses': [
+            {'status_code': http.HTTPStatus.OK, 'body': {'user_id': 1234, 'user_name': 'John Doe'}}
+        ],
+        'http_method': http.HTTPMethod.POST,
+        'response_validators': [
+            {
+                'status_code': http.HTTPStatus.OK,
+                'json_schema': {
+                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                    'properties': {'body': {'type': 'object'}}
+                }
+            }
+        ]
+    }
+    )
+
+    get_router().cache_clear()  # Empty router
+    get_router(mocked_config).add_route(route)
+
+    yield
+
+    get_router().cache_clear()
 
 
 @pytest.fixture(scope='session')

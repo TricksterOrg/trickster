@@ -5,8 +5,12 @@ import uuid
 
 import pytest
 from fastapi import Request
+from pydantic import ValidationError
 
-from trickster.model import ParametrizedPath, Response, Route, ResponseDelay, ResponseValidator, ResponseSelector
+from trickster.model import (
+    ParametrizedPath, Response, Route, ResponseDelay, ResponseValidator, ResponseSelector,
+    RouteMatch, InputResponseValidator, InputResponse, InputRoute, HealthcheckStatus
+)
 
 from typing import cast
 
@@ -33,82 +37,24 @@ class TestParametrizedPath:
         ('test/', '/test/'),
         ('/test/', '/test/'),
     ])
-    def test_validate(self, raw, normalized):
+    def test_validate_model(self, raw, normalized):
         path = ParametrizedPath.model_validate(raw)
+
         assert isinstance(path, ParametrizedPath)
         assert str(path) == normalized
 
-    @pytest.mark.parametrize('parametrized, from_request, result', [
-        ('/test', 'test', {}),
-        ('test', 'test', {}),
-        ('test/', 'test/', {}),
-        ('/test/', 'test/', {}),
-        ('/something', 'else/', None),
-    ])
-    def test_match(self, parametrized, from_request, result):
-        path = ParametrizedPath.model_validate(parametrized)
-        assert path.match_path(from_request) == result
-
-
-class TestResponse:
-    def test_get_fastapi_response(self):
-        response = Response(
-            status_code=http.HTTPStatus.OK,
-            body={
-                'foo': 'bar'
-            },
-            headers={
-                'header': 'value'
-            }
-        ).as_fastapi_response()
-
-        assert response.body == b'{"foo":"bar"}'
-        assert response.status_code == 200
-        assert response.headers.raw == [
-            (b'header', b'value'),
-            (b'content-length', b'13'),
-            (b'content-type', b'application/json')
+    @pytest.mark.parametrize(
+        'data',
+        [
+            True,
+            123,
+            {},
+            []
         ]
-
-
-class TestRoute:
-    def test_match_method(self):
-        route = Route(path='test', responses=[], http_methods=[http.HTTPMethod.GET])
-        assert route.match_method('GET') == http.HTTPMethod.GET
-
-    def test_match_method_from_multiple(self):
-        route = Route(path='test', responses=[], http_methods=[http.HTTPMethod.GET, http.HTTPMethod.POST])
-        assert route.match_method('POST') == http.HTTPMethod.POST
-
-    def test_match_method_with_no_match(self):
-        route = Route(path='test', responses=[], http_methods=[http.HTTPMethod.GET])
-        assert route.match_method('POST') is None
-
-
-class TestParametrizedPath:
-    @pytest.mark.parametrize('raw, normalized', [
-        ('/test', '/test'),
-        ('test', '/test'),
-        ('test/', '/test/'),
-        ('/test/', '/test/'),
-    ])
-    def test_normalize_path(self, raw, normalized):
-        assert ParametrizedPath._normalize(raw) == normalized
-
-    @pytest.mark.parametrize('raw, normalized', [
-        ('/test', '/test'),
-        ('test', '/test'),
-        ('test/', '/test/'),
-        ('/test/', '/test/'),
-    ])
-    def test_validate(self, raw, normalized):
-        path = ParametrizedPath.model_validate(raw)
-        assert isinstance(path, ParametrizedPath)
-        assert str(path) == normalized
-
-    def test_validate_invalid(self):
+    )
+    def test_validate_invalid(self, data):
         with pytest.raises(ValueError):
-            ParametrizedPath.validate_model(True)
+            ParametrizedPath.validate_model(data)
 
     @pytest.mark.parametrize('parametrized, from_request, result', [
         ('/test', 'test', {}),
@@ -119,12 +65,11 @@ class TestParametrizedPath:
     ])
     def test_match(self, parametrized, from_request, result):
         path = ParametrizedPath.model_validate(parametrized)
+
         assert path.match_path(from_request) == result
 
     @pytest.mark.xfail
     def test_serialize_model(self):
-        # TODO: Dig deeper into the class
-        # Probably     @field_validator('path') should be used in validate_model
         path = ParametrizedPath(path='some/path')
 
         assert path.serialize_model() == 'some/path'
@@ -133,41 +78,98 @@ class TestParametrizedPath:
         ...
 
 
-class TestResponse:
-    def test_get_fastapi_response(self):
-        response = Response(
+class TestResponseValidator:
+    def test_validate_response_valid(self):
+        response = Response(status_code=http.HTTPStatus.OK, body={'some': 'body', 'extra': 1})
+        response_validator = ResponseValidator(
             status_code=http.HTTPStatus.OK,
-            body={
-                'foo': 'bar'
+            json_schema={
+                '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                'properties': {'some': {'type': 'string'}}
             },
-            headers={
-                'header': 'value'
-            }
-        ).as_fastapi_response()
-
-        assert response.body == b'{"foo":"bar"}'
-        assert response.status_code == 200
-        assert response.headers.raw == [
-            (b'header', b'value'),
-            (b'content-length', b'13'),
-            (b'content-type', b'application/json')
-        ]
-
-    def test_delay_response(self, mocker):
-        response = Response(
-            status_code=http.HTTPStatus.OK,
-            body={
-                'foo': 'bar'
-            },
-            headers={
-                'header': 'value'
-            },
-            delay={'min_delay': 1, 'max_delay': 1}
         )
-        mocked_sleep = mocker.patch('time.sleep')
 
-        response.delay_response()
-        mocked_sleep.assert_called_once_with(1)
+        assert response_validator.validate_response(response) is None
+
+    @pytest.mark.parametrize(
+        'data, expectation',
+        [
+            pytest.param(
+                {'status_code': http.HTTPStatus.NOT_FOUND,
+                 'json_schema': {'$schema': 'https://json-schema.org/draft/2020-12/schema'}
+                 },
+                f'{ValueError.__name__}: Route response validation failed.',
+                id='Invalid HTTP status code'
+            ),
+            pytest.param(
+                {'status_code': http.HTTPStatus.OK,
+                 'json_schema': {'$schema': 'https://json-schema.org/draft/2020-12/schema', 'type': 'number'}
+                 },
+                f'{ValueError.__name__}: JsonSchema validation failed.',
+                id='Invalid response against JSON schema'
+            )
+        ]
+    )
+    def test_validate_response_invalid(self, data, expectation, mocker):
+        response = Response(status_code=http.HTTPStatus.OK, body={'some': 'body'})
+        response_validator = ResponseValidator(**data)
+
+        with pytest.raises(ValueError) as e:
+            response_validator.validate_response(response)
+
+        assert e.exconly(tryshort=True) == expectation
+
+
+class TestRouteMatch:
+    @pytest.mark.parametrize(
+        'data, expectation',
+        [
+            (
+                {
+                    'route': {'id': uuid.UUID('70850e6c-7755-4edc-8fc2-12caf5c3d8ca'), 'hits': 0, 'path': '/test'},
+                    'http_method': http.HTTPMethod.GET,
+                    'path_params': {},
+                },
+                {
+                    'http_method': http.HTTPMethod.GET,
+                    'path_params': {},
+                    'route': {
+                        'hits': 0,
+                        'http_methods': [http.HTTPMethod.GET],
+                        'id': uuid.UUID('70850e6c-7755-4edc-8fc2-12caf5c3d8ca'),
+                        'path': '/test',
+                        'response_selector': ResponseSelector.RANDOM,
+                        'response_validators': [],
+                        'responses': []
+                    },
+                }
+            ),
+            (
+                {
+                    'route': {'id': uuid.UUID('44450e6c-7755-4edc-8fc2-12caf5c3d8ca'), 'hits': 7, 'path': '/test'},
+                    'http_method': 'GET',
+                    'path_params': {'someparam': 'somevalue', 'anotherparam': [1, 2, 3]},
+                },
+                {
+                    'http_method': http.HTTPMethod.GET,
+                    'path_params': {'someparam': 'somevalue', 'anotherparam': [1, 2, 3]},
+                    'route': {
+                        'hits': 7,
+                        'http_methods': [http.HTTPMethod.GET],
+                        'id': uuid.UUID('44450e6c-7755-4edc-8fc2-12caf5c3d8ca'),
+                        'path': '/test',
+                        'response_selector': ResponseSelector.RANDOM,
+                        'response_validators': [],
+                        'responses': []
+                    },
+                }
+            ),
+        ]
+    )
+    def test_route_match_is_valid(self, data, expectation):
+        route_match = RouteMatch(**data).model_dump()
+
+        assert route_match == expectation
 
 
 class TestResponseDelay:
@@ -232,53 +234,48 @@ class TestResponseDelay:
         assert e.exconly(tryshort=True).startswith(expectation)
 
     def test_delay_response(self, mocker):
-        response_delay = ResponseDelay(min_delay=1, max_delay=1)
+        response_delay = ResponseDelay(min_delay=1.57, max_delay=1.57)
         mocked_sleep = mocker.patch('time.sleep')
 
         response_delay.delay_response()
-        mocked_sleep.assert_called_once_with(1)
+        mocked_sleep.assert_called_once_with(1.57)
 
 
-class TestResponseValidator:
-    def test_validate_response_valid(self):
-        response = Response(status_code=http.HTTPStatus.OK, body={'some': 'body', 'extra': 1})
-        response_validator = ResponseValidator(
+class TestResponse:
+    def test_as_fastapi_response(self):
+        response = Response(
             status_code=http.HTTPStatus.OK,
-            json_schema={
-                '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                'properties': {'some': {'type': 'string'}}
-             },
-        )
+            body={
+                'foo': 'bar'
+            },
+            headers={
+                'header': 'value'
+            }
+        ).as_fastapi_response()
 
-        assert response_validator.validate_response(response) is None
-
-    @pytest.mark.parametrize(
-        'data, expectation',
-        [
-            pytest.param(
-                {'status_code': http.HTTPStatus.NOT_FOUND,
-                 'json_schema': {'$schema': 'https://json-schema.org/draft/2020-12/schema'}
-                 },
-                f'{ValueError.__name__}: Route response validation failed.',
-                id='Invalid HTTP status code'
-            ),
-            pytest.param(
-                {'status_code': http.HTTPStatus.OK,
-                 'json_schema': {'$schema': 'https://json-schema.org/draft/2020-12/schema', 'type': 'number'}
-                 },
-                f'{ValueError.__name__}: JsonSchema validation failed.',
-                id='Invalid response against JSON schema'
-            )
+        assert response.body == b'{"foo":"bar"}'
+        assert response.status_code == 200
+        assert response.headers.raw == [
+            (b'header', b'value'),
+            (b'content-length', b'13'),
+            (b'content-type', b'application/json')
         ]
-    )
-    def test_validate_response_invalid(self, data, expectation, mocker):
-        response = Response(status_code=http.HTTPStatus.OK, body={'some': 'body'})
-        response_validator = ResponseValidator(**data)
 
-        with pytest.raises(ValueError) as e:
-            response_validator.validate_response(response)
+    def test_delay_response(self, mocker):
+        response = Response(
+            status_code=http.HTTPStatus.OK,
+            body={
+                'foo': 'bar'
+            },
+            headers={
+                'header': 'value'
+            },
+            delay={'min_delay': 1, 'max_delay': 1}
+        )
+        mocked_sleep = mocker.patch('time.sleep')
 
-        assert e.exconly(tryshort=True) == expectation
+        response.delay_response()
+        mocked_sleep.assert_called_once_with(1)
 
 
 class TestResponseSelector:
@@ -351,70 +348,62 @@ class TestRoute:
         Response(status_code=http.HTTPStatus.OK, body={'body': 5}, hits=4),
     ]
 
-    @pytest.mark.xfail
-    def test_validate_model(self):
-        ...
+    response_validators = [
+        ResponseValidator(
+            status_code=http.HTTPStatus.OK,
+            json_schema={
+                '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                'properties': {'body': {'type': 'number'}}
+            },
+        ),
+        ResponseValidator(
+            status_code=http.HTTPStatus.OK,
+            json_schema={
+                '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                'properties': {'body': {'type': 'string'}}
+            },
+        )
+    ]
 
-    def test_validate_existing_response_validatos_combinations(self):
-        response_validators = [
-            ResponseValidator(
-                status_code=http.HTTPStatus.OK,
-                json_schema={
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'body': {'type': 'number'}}
-                },
-            ),
-            ResponseValidator(
-                status_code=http.HTTPStatus.OK,
-                json_schema={
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'body': {'type': 'string'}}
-                },
-            )
-        ]
-        route = Route(path='test', responses=self.responses, response_validators=response_validators, http_methods=[http.HTTPMethod.GET])
+    def test_validate_model_valid(self):
+        data = Route(
+            path='test', responses=self.responses, response_validators=self.response_validators,
+            http_methods=[http.HTTPMethod.GET]
+        )
+
+        assert Route.validate_model(data) == data
+
+    @pytest.mark.xfail
+    def test_validate_model_invalid(self):
+        data = Route(
+            path='test', responses=self.responses + [Response(status_code=http.HTTPStatus.OK, body={'body': True})],
+            response_validators=self.response_validators,
+            http_methods=[http.HTTPMethod.GET]
+        )
+
+        with pytest.raises(ValueError):
+            Route.validate_model(data) == data
+
+    def test_validate_existing_response_validators_combinations(self):
+        route = Route(
+            path='test', responses=self.responses, response_validators=self.response_validators,
+            http_methods=[http.HTTPMethod.GET]
+        )
 
         assert route.validate_existing_response_validator_combinations() is None
 
     def test_validate_new_response_validator(self):
-        response_validators = [
-            ResponseValidator(
-                status_code=http.HTTPStatus.OK,
-                json_schema={
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'body': {'type': 'number'}}
-                },
-            ),
-            ResponseValidator(
-                status_code=http.HTTPStatus.OK,
-                json_schema={
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'body': {'type': 'string'}}
-                },
-            )
-        ]
-        route = Route(path='test', responses=self.responses, response_validators=response_validators, http_methods=[http.HTTPMethod.GET])
+        route = Route(
+            path='test', responses=self.responses, response_validators=self.response_validators,
+            http_methods=[http.HTTPMethod.GET]
+        )
 
-        assert route.validate_new_response_validator(response_validators[0]) is None
+        assert route.validate_new_response_validator(self.response_validators[0]) is None
 
     def test_validate_new_response(self):
-        response_validators = [
-            ResponseValidator(
-                status_code=http.HTTPStatus.OK,
-                json_schema={
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'body': {'type': 'number'}}
-                },
-            ),
-            ResponseValidator(
-                status_code=http.HTTPStatus.OK,
-                json_schema={
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'body': {'type': 'string'}}
-                },
-            )
-        ]
-        route = Route(path='test', responses=[], response_validators=response_validators, http_methods=[http.HTTPMethod.GET])
+        route = Route(
+            path='test', responses=[], response_validators=self.response_validators, http_methods=[http.HTTPMethod.GET]
+        )
 
         for response in self.responses:
             assert route.validate_new_response(response) is None
@@ -427,12 +416,15 @@ class TestRoute:
                 'properties': {'body': {'type': 'string'}}
             },
         )
-        route = Route(path='test', responses=[], response_validators=[response_validator], http_methods=[http.HTTPMethod.GET])
+        route = Route(
+            path='test', responses=[], response_validators=[response_validator], http_methods=[http.HTTPMethod.GET]
+        )
 
         with pytest.raises(ValueError) as e:
             route.validate_new_response(self.responses[0])
 
-        assert e.exconly(tryshort=True) == f'ValueError: Response "{self.responses[0].id}" doesn\'t match ony of the configured validators.'
+        assert e.exconly(tryshort=True) == \
+               f'ValueError: Response "{self.responses[0].id}" doesn\'t match ony of the configured validators.'
 
     def test_validate_new_response_empty(self):
         route = Route(path='test', responses=[], http_methods=[http.HTTPMethod.GET])
@@ -441,23 +433,21 @@ class TestRoute:
 
     def test_match(self):
         route = Route(path='test', responses=self.responses, http_methods=[http.HTTPMethod.GET])
-        mocked_request = cast(Request, MockedRequest('GET', {'path': 'test'}))
-        mocked_request_two = cast(Request, MockedRequest('PATCH', {'path': 'test'}))
+        mocked_request_match = cast(Request, MockedRequest('GET', {'path': 'test'}))
+        mocked_request_no_match = cast(Request, MockedRequest('PATCH', {'path': 'test'}))
 
-        assert route.match(mocked_request) == (http.HTTPMethod.GET, {})
-        assert route.match(mocked_request_two) is None
+        assert route.match(mocked_request_match) == (http.HTTPMethod.GET, {})
+        assert route.match(mocked_request_no_match) is None
 
     def test_match_method(self):
-        route = Route(path='test', responses=[], http_methods=[http.HTTPMethod.GET])
-        assert route.match_method('GET') == http.HTTPMethod.GET
+        route = Route(
+            path='test', responses=[],
+            http_methods=[http.HTTPMethod.GET, http.HTTPMethod.POST, http.HTTPMethod.DELETE]
+        )
 
-    def test_match_method_from_multiple(self):
-        route = Route(path='test', responses=[], http_methods=[http.HTTPMethod.GET, http.HTTPMethod.POST])
         assert route.match_method('POST') == http.HTTPMethod.POST
-
-    def test_match_method_with_no_match(self):
-        route = Route(path='test', responses=[], http_methods=[http.HTTPMethod.GET])
-        assert route.match_method('POST') is None
+        assert route.match_method('GET') == http.HTTPMethod.GET
+        assert route.match_method('PATCH') is None
 
     def test_get_response(self, mocker):
         route = Route(
@@ -480,30 +470,206 @@ class TestRoute:
         assert route.get_response_by_id(self.responses[2].id) == self.responses[2]
         assert route.get_response_by_id(uuid.uuid4()) is None
 
-    def test_get_response_validator_by_id(self, mocker):
-        validators = [
-            ResponseValidator(
-                status_code=http.HTTPStatus.OK,
-                json_schema={
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'some': {'type': 'string'}}
-                },
-            ),
-            ResponseValidator(
-                status_code=http.HTTPStatus.OK,
-                json_schema={
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'some': {'type': 'string'}}
-                },
-            ),
-        ]
+    def test_get_response_validator_by_id(self):
         route = Route(
             path='test',
             responses=self.responses,
             response_selector=ResponseSelector.FIRST,
-            response_validators=validators,
+            response_validators=self.response_validators,
             http_methods=[http.HTTPMethod.GET],
         )
 
-        assert route.get_response_validator_by_id(validators[0].id) == validators[0]
+        assert route.get_response_validator_by_id(self.response_validators[0].id) == self.response_validators[0]
         assert route.get_response_validator_by_id(uuid.uuid4()) is None
+
+
+class TestHealthcheckStatus:
+    @pytest.mark.parametrize(
+        'data',
+        [
+            {},
+            {'status': 'OK'},
+        ]
+    )
+    def test_healthcheck_status_valid(self, data):
+        assert HealthcheckStatus(**data).model_dump() == {'status': 'OK'}
+
+
+class TestInputResponseValidator:
+    @pytest.mark.parametrize(
+        'data, expectation',
+        [
+            ({'status_code': 200, 'json_schema': {}}, {'status_code': 200, 'json_schema': {}}),
+            (
+                {
+                    'status_code': 200,
+                    'json_schema': {
+                        '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                        'properties': {'some': {'type': 'string'}}
+                    }
+                },
+                {
+                    'status_code': 200,
+                    'json_schema': {
+                        '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                        'properties': {'some': {'type': 'string'}}
+                    }
+                }
+            )
+        ]
+    )
+    def test_input_response_validator_valid(self, data, expectation):
+        assert InputResponseValidator(**data).model_dump() == expectation
+
+
+class TestInputResponse:
+    @pytest.mark.parametrize(
+        'data, expectation',
+        [
+            (
+                {
+                    'status_code': 200,
+                    'body': {},
+                },
+                {
+                    'body': {},
+                    'delay': (0, 0),
+                    'headers': {},
+                    'status_code': 200,
+                    'weight': 1
+                }
+            ),
+            (
+                {
+                    'status_code': 200,
+                    'body': {'body_field_name': 'value'},
+                    'delay': {'min_delay': 0.05, 'max_delay': 0.25},
+                    'headers': {'User-Agent': 'Mozilla/007'},
+                    'weight': 0.5
+                },
+                {
+                    'body': {'body_field_name': 'value'},
+                    'delay': (0.05, 0.25),
+                    'headers': {'User-Agent': 'Mozilla/007'},
+                    'status_code': 200,
+                    'weight': 0.5
+                }
+            )
+        ]
+    )
+    def test_input_response_valid(self, data, expectation):
+        assert InputResponse(**data).model_dump() == expectation
+
+
+class TestInputRoute:
+    @pytest.mark.parametrize(
+        'data, expectation',
+        [
+            (
+                {
+                    'path': '/test',
+                },
+                {
+                    'http_methods': [http.HTTPMethod.GET],
+                    'path': '/test',
+                    'response_selector': ResponseSelector.RANDOM,
+                    'response_validators': [],
+                    'responses': []
+                }
+            ),
+            (
+                    {
+                        'path': '/test',
+                        'responses': []
+                    },
+                    {
+                        'http_methods': [http.HTTPMethod.GET],
+                        'path': '/test',
+                        'response_selector': ResponseSelector.RANDOM,
+                        'response_validators': [],
+                        'responses': []
+                    }
+            ),
+            (
+                    {
+                        'path': '/test',
+                        'responses': [{'status_code': 200, 'body': {}}],
+                    },
+                    {
+                        'http_methods': [http.HTTPMethod.GET],
+                        'path': '/test',
+                        'response_selector': ResponseSelector.RANDOM,
+                        'response_validators': [],
+                        'responses': [
+                            {
+                                'body': {},
+                                'delay': (0, 0),
+                                'headers': {},
+                                'status_code': http.HTTPStatus.OK,
+                                'weight': 1
+                            }
+                        ],
+                    }
+            ),
+            (
+                    {
+                        'path': '/test',
+                        'responses': [{'status_code': 200, 'body': {}}],
+                        'http_methods': [http.HTTPMethod.POST],
+                        'response_validators': [
+                            ResponseValidator(
+                                id=uuid.UUID('e647ef2e-a945-4649-a8ea-5deccaf159e5'),
+                                status_code=http.HTTPStatus.OK,
+                                json_schema={
+                                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                                    'properties': {'body': {'type': 'number'}}
+                                },
+                            ),
+                            ResponseValidator(
+                                id=uuid.UUID('ec2a2765-2fc0-4aa1-9fd5-2b6f2385d82d'),
+                                status_code=http.HTTPStatus.OK,
+                                json_schema={
+                                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                                    'properties': {'body': {'type': 'string'}}
+                                },
+                            )
+                        ],
+                        'response_selector': ResponseSelector.FIRST,
+                    },
+                    {
+                        'http_methods': [http.HTTPMethod.POST],
+                        'path': '/test',
+                        'response_selector': ResponseSelector.FIRST,
+                        'response_validators': [
+                            {
+                                'id': uuid.UUID('e647ef2e-a945-4649-a8ea-5deccaf159e5'),
+                                'status_code': http.HTTPStatus.OK,
+                                'json_schema': {
+                                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                                    'properties': {'body': {'type': 'number'}}
+                                },
+                            },
+                            {
+                                'id': uuid.UUID('ec2a2765-2fc0-4aa1-9fd5-2b6f2385d82d'),
+                                'status_code': http.HTTPStatus.OK,
+                                'json_schema': {
+                                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                                    'properties': {'body': {'type': 'string'}}
+                                },
+                            }
+                        ],
+                        'responses': [
+                            {
+                                'body': {},
+                                'delay': (0, 0),
+                                'headers': {},
+                                'status_code': http.HTTPStatus.OK,
+                                'weight': 1
+                            }
+                        ],
+                    }
+            ),
+        ]
+    )
+    def test_input_route_valid(self, data, expectation):
+        assert InputRoute(**data).model_dump() == expectation

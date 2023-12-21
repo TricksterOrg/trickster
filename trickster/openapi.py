@@ -107,7 +107,7 @@ class OpenApiSpec:
                     result.update(self._anyof_schema_to_json_schema((cast(openspec.AnyOf, schema))))
                 case openspec.DataType.NULL | openspec.DataType.BOOLEAN:
                     result.update(self._schema_to_base_json_schema(schema))
-                case _:
+                case _:  # pragma: no cover
                     raise ValueError(f'Unsupported schema type {schema.type}')
         return remove_none_values(result)
 

@@ -2,14 +2,6 @@
 	"internal_prefix": "/internal",
 	"openapi_boostrap": "openapi.yaml",
 	"settings": {
-		"error_responses": [
-			{
-				"status_code": 404,
-    			"body": {
-					"error": "Page not found"
-				}
-			}
-		]
 	},
 	"logging": {
 		"version": 1,

@@ -2,10 +2,12 @@
 	"internal_prefix": "/internal",
 	"openapi_boostrap": "openapi.yaml",
 	"settings": {
-		"error_response": [
+		"error_responses": [
 			{
 				"status_code": 404,
-				"message": "Page not found!"
+    			"body": {
+					"error": "Page not found"
+				}
 			}
 		]
 	},
@@ -13,11 +15,11 @@
 		"version": 1,
 		"disable_existing_loggers": false,
 		"formatters": {
-			"default": {
-				"()": "uvicorn.logging.DefaultFormatter",
-				"fmt": "%(levelprefix)s %(message)s",
-				"datefmt": "%Y-%m-%d %H:%M:%S"
-			}
+				"default": {
+					"()": "uvicorn.logging.DefaultFormatter",
+					"fmt": "%(levelprefix)s %(message)s",
+					"datefmt": "%Y-%m-%d %H:%M:%S"
+				}
 		},
 		"handlers": {
 			"default": {
@@ -29,7 +31,7 @@
 		"loggers": {
 			"trickster": {
 				"handlers": ["default"],
-				"level": "ERROR"
+				"level": "DEBUG"
 			},
 			"openapi_parser.builders.schema": {
 				"level": "ERROR"

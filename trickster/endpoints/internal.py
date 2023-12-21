@@ -210,4 +210,4 @@ def delete_error_response(response_id: uuid.UUID, mocked_router: Router = Depend
     if error_response := mocked_router.get_error_response_by_id(response_id):
         mocked_router.delete_error_response(error_response)
         return mocked_router.get_error_responses()
-    raise HTTPException(status_code=404, detail=f'Error response "{error_response}" was not found.')
+    raise HTTPException(status_code=404, detail=f'Error response "{response_id}" was not found.')

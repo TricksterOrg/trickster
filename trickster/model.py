@@ -235,7 +235,7 @@ class ResponseSelector(enum.Enum):
                 return random.choices(responses, weights=weights, k=1)[0]
             case ResponseSelector.BALANCED:
                 return min(responses, key=lambda response: response.hits)
-            case _:
+            case _:  # pragma: no cover
                 raise ValueError(f'Response selection algorithm for {self.value} is not configured.')
 
 
