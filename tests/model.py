@@ -22,14 +22,10 @@ class MockedRequest:
 
 
 class TestParametrizedPath:
-    @pytest.mark.parametrize('raw, normalized', [
-        ('/test', '/test'),
-        ('test', '/test'),
-        ('test/', '/test/'),
-        ('/test/', '/test/'),
-    ])
-    def test_normalize_path(self, raw, normalized):
-        assert ParametrizedPath._normalize(raw) == normalized
+    def test_serialize_model(self):
+        path = ParametrizedPath.model_validate('users/{user_id:integer}/books')
+
+        assert path.serialize_model() == '/users/{user_id:integer}/books'
 
     @pytest.mark.parametrize('raw, normalized', [
         ('/test', '/test'),
@@ -52,9 +48,18 @@ class TestParametrizedPath:
             []
         ]
     )
-    def test_validate_invalid(self, data):
+    def test_validate_model_invalid(self, data):
         with pytest.raises(ValueError):
             ParametrizedPath.validate_model(data)
+
+    @pytest.mark.parametrize('raw, normalized', [
+        ('/test', '/test'),
+        ('test', '/test'),
+        ('test/', '/test/'),
+        ('/test/', '/test/'),
+    ])
+    def test_normalize(self, raw, normalized):
+        assert ParametrizedPath._normalize(raw) == normalized
 
     @pytest.mark.parametrize('parametrized, from_request, result', [
         ('/test', 'test', {}),
@@ -62,20 +67,22 @@ class TestParametrizedPath:
         ('test/', 'test/', {}),
         ('/test/', 'test/', {}),
         ('/something', 'else/', None),
+        ('/users/d{somevar:wrongtype}/books', '/just/a/path', None),
+        ('/users/{user_id:integer}/books', '/users/1234/books', {'user_id': '1234'}),
+        ('/users/{user_id:number}/books', '/users/12.34/books', {'user_id': '12.34'}),
+        ('/users/{user_id:string}/books', '/users/23ad3fa3@/books', {'user_id': '23ad3fa3@'}),
+        ('/users/{user_id:boolean}/books', '/users/0/books', {'user_id': '0'}),
+        ('/users/{user_id:uuid4}/books', '/users/9566b682-3531-49aa-ab11-724d3cb3b5fd/books',
+         {'user_id': '9566b682-3531-49aa-ab11-724d3cb3b5fd'}
+         ),
+        ('/users/{user_id:integer}/books/{book_name:string}', '/users/1234/books/SomeBookName',
+         {'user_id': '1234', 'book_name': 'SomeBookName'}
+         ),
     ])
-    def test_match(self, parametrized, from_request, result):
+    def test_match_path(self, parametrized, from_request, result):
         path = ParametrizedPath.model_validate(parametrized)
 
         assert path.match_path(from_request) == result
-
-    @pytest.mark.xfail
-    def test_serialize_model(self):
-        path = ParametrizedPath(path='some/path')
-
-        assert path.serialize_model() == 'some/path'
-
-    def test_path_regex(self):
-        ...
 
 
 class TestResponseValidator:
@@ -110,7 +117,7 @@ class TestResponseValidator:
             )
         ]
     )
-    def test_validate_response_invalid(self, data, expectation, mocker):
+    def test_validate_response_invalid(self, data, expectation):
         response = Response(status_code=http.HTTPStatus.OK, body={'some': 'body'})
         response_validator = ResponseValidator(**data)
 
@@ -173,65 +180,16 @@ class TestRouteMatch:
 
 
 class TestResponseDelay:
-    def test_serialize_model(self):
-        response_delay = ResponseDelay(min_delay=1, max_delay=2)
-
-        assert response_delay.serialize_model() == (1, 2)
-
     @pytest.mark.parametrize(
-        'test_data, expectation',
+        'data, expectation',
         [
-            pytest.param(
-                {'min_delay': 0.2, 'max_delay': 1},
-                {'min_delay': 0.2, 'max_delay': 1},
-                id='Valid values in a dict'
-            ),
-            pytest.param(
-                0.1,
-                {'min_delay': 0.1, 'max_delay': 0.1},
-                id='Single valid value'
-            ),
-            pytest.param(
-                (0.2, 1),
-                {'min_delay': 0.2, 'max_delay': 1},
-                id='Valid values in a tuple'
-            ),
+            ({}, (0, 0)),
+            ({'min_delay': 0.25}, (0.25, 0.25)),
+            ({'min_delay': 0.25, 'max_delay': 1}, (0.25, 1)),
         ]
     )
-    def test_validate_model_valid(self, test_data, expectation):
-        assert ResponseDelay.validate_model(test_data) == expectation
-
-    @pytest.mark.parametrize(
-        'test_data, expectation',
-        [
-            pytest.param(
-                (3, 1),
-                'ValueError: Maximum delay',
-                id='Min value > max value'
-            ),
-            pytest.param(
-                (1, 2, 3),
-                'ValueError: Input of response delay must be a single value',
-                id='More than 2 values'
-            ),
-            pytest.param(
-                {'some_value': True, 'another_value': 2},
-                'ValueError: Input of response delay must be a single value',
-                marks=pytest.mark.xfail,
-                id='Dict with invalid values'
-            ),
-            pytest.param(
-                'Single_value',
-                'ValueError: Input of response delay must be a single value',
-                id='Single invalid value'
-            )
-        ]
-    )
-    def test_validate_model_invalid(self, test_data, expectation):
-        with pytest.raises(ValueError) as e:
-            ResponseDelay.validate_model(test_data)
-
-        assert e.exconly(tryshort=True).startswith(expectation)
+    def test_response_delay(self, data, expectation):
+        assert ResponseDelay(**data).model_dump() == expectation
 
     def test_delay_response(self, mocker):
         response_delay = ResponseDelay(min_delay=1.57, max_delay=1.57)
@@ -365,25 +323,6 @@ class TestRoute:
         )
     ]
 
-    def test_validate_model_valid(self):
-        data = Route(
-            path='test', responses=self.responses, response_validators=self.response_validators,
-            http_methods=[http.HTTPMethod.GET]
-        )
-
-        assert Route.validate_model(data) == data
-
-    @pytest.mark.xfail
-    def test_validate_model_invalid(self):
-        data = Route(
-            path='test', responses=self.responses + [Response(status_code=http.HTTPStatus.OK, body={'body': True})],
-            response_validators=self.response_validators,
-            http_methods=[http.HTTPMethod.GET]
-        )
-
-        with pytest.raises(ValueError):
-            Route.validate_model(data) == data
-
     def test_validate_existing_response_validators_combinations(self):
         route = Route(
             path='test', responses=self.responses, response_validators=self.response_validators,
@@ -491,7 +430,7 @@ class TestHealthcheckStatus:
             {'status': 'OK'},
         ]
     )
-    def test_healthcheck_status_valid(self, data):
+    def test_healthcheck_status(self, data):
         assert HealthcheckStatus(**data).model_dump() == {'status': 'OK'}
 
 
@@ -518,7 +457,7 @@ class TestInputResponseValidator:
             )
         ]
     )
-    def test_input_response_validator_valid(self, data, expectation):
+    def test_input_response_validator(self, data, expectation):
         assert InputResponseValidator(**data).model_dump() == expectation
 
 
@@ -557,7 +496,7 @@ class TestInputResponse:
             )
         ]
     )
-    def test_input_response_valid(self, data, expectation):
+    def test_input_response(self, data, expectation):
         assert InputResponse(**data).model_dump() == expectation
 
 
@@ -671,5 +610,5 @@ class TestInputRoute:
             ),
         ]
     )
-    def test_input_route_valid(self, data, expectation):
+    def test_input_route(self, data, expectation):
         assert InputRoute(**data).model_dump() == expectation

@@ -32,7 +32,7 @@ class TestMockedEndpoints:
 
         response = client.get('/users')
         assert response.status_code == 200
-        assert response.json() == payload_route['responses'][0]['body']
+        assert response.json() == payload_route['responses'][1]['body']
 
         response = client.get('/non-existent-path')
         assert response.status_code == 404
