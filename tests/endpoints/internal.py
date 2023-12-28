@@ -1,6 +1,9 @@
 import http
 import uuid
-import copy
+
+from trickster.router import get_router
+from trickster.config import get_config
+from trickster.model import Route, Response, ParametrizedPath
 
 
 class TestHealthcheck:
@@ -49,16 +52,48 @@ class TestInternalEndpoints:
     payload_error_response = {'status_code': http.HTTPStatus.NOT_FOUND, 'body': {'detail': 'Did not found'}}
 
     def test_get_routes(self, client):
-        client.post('/internal/routes', json=self.payload_route)
+        router = get_router(config=get_config())
+        router.add_route(Route(
+            responses=[
+                Response(status_code=http.HTTPStatus.OK, body={'user_id': 1234, 'user_name': 'Mark Twain'}),
+                Response(status_code=http.HTTPStatus.OK, body={'user_id': 5678, 'user_name': 'Charles Dickens'})
+            ],
+            http_methods=[http.HTTPMethod.POST],
+            path=ParametrizedPath.model_validate('/some/path')
+        ))
 
         response = client.get('/internal/routes')
 
         assert response.status_code == 200
 
         response_body = response.json()
-        expected_body = copy.deepcopy(self.payload_route)
-
-        # assert response_body == [expected_body]
+        del response_body[0]['id']
+        del response_body[0]['responses'][0]['id']
+        del response_body[0]['responses'][1]['id']
+        assert response_body == [{
+            'hits': 0,
+            'http_methods': ['POST'],
+            'path': '/some/path',
+            'response_selector': 'random',
+            'response_validators': [],
+            'responses': [
+                {
+                    'body': {'user_id': 1234, 'user_name': 'Mark Twain'},
+                    'delay': [0.0, 0.0],
+                    'headers': {},
+                    'hits': 0,
+                    'status_code': 200,
+                    'weight': 1.0
+                }, {
+                    'body': {'user_id': 5678, 'user_name': 'Charles Dickens'},
+                    'delay': [0.0, 0.0],
+                    'headers': {},
+                    'hits': 0,
+                    'status_code': 200,
+                    'weight': 1.0
+                }
+            ]
+        }]
 
     def test_get_route(self, client):
         response = client.post('/internal/routes', json=self.payload_route)
@@ -284,8 +319,8 @@ class TestInternalEndpoints:
         assert response.json()[1]['status_code'] == self.payload_error_response['status_code']
         assert response.json()[1]['body'] == self.payload_error_response['body']
 
-    def test_delete_error_responses(self, client):
-        client.post(f'/internal/settings/error_responses', json=self.payload_error_response)
+    def test_delete_error_responses(self, mocked_config, client):
+        client.post(f'{mocked_config.internal_prefix}/settings/error_responses', json=self.payload_error_response)
         response = client.get(f'/internal/settings/error_response')
 
         assert len(response.json()) != 0
@@ -293,7 +328,7 @@ class TestInternalEndpoints:
         response = client.delete(f'/internal/settings/error_responses')
         assert response.status_code == 200
 
-        # assert client.get(f'/internal/settings/error_responses').json() == []
+        assert client.get(f'/internal/settings/error_responses').json() == []
 
     def test_delete_error_response(self, client):
         response = client.post(f'/internal/settings/error_responses', json=self.payload_error_response)
@@ -309,3 +344,29 @@ class TestInternalEndpoints:
 
         assert response.status_code == 404
         assert response.json() == {'detail': f'Error response "{non_existent_id}" was not found.'}
+
+    def test_validation_error(self, client):
+        response = client.post(f'/internal/routes', json={
+            'path': '/users',
+            'responses': [{
+                'status_code': http.HTTPStatus.OK,
+                'body': {
+                    'user_id': 1234,
+                    'user_name': 'Mark Twain'
+                }
+            },],
+            'response_validators': [
+                {
+                    'status_code': http.HTTPStatus.OK,
+                    'json_schema': {
+                        '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                        'required': ['xxx'],
+                        'properties': {
+                            'xxx': {'type': 'number'},
+                        }
+                    }
+                }
+            ]
+        })
+
+        assert response.status_code == 400
