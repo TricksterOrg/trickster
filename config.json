@@ -8,6 +8,12 @@
     			"body": {
 					"error": "Page not found"
 				}
+			},
+			{
+				"status_code": 401,
+				"body": {
+					"error": "Unauthorized"
+				}
 			}
 		]
 	},
