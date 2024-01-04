@@ -48,7 +48,7 @@ def create_route(route: InputRoute, mocked_router: Router = Depends(get_router))
         mocked_router.add_route(new_route)
         return new_route
     except pydantic.ValidationError as e:
-        raise ValidationError(str(e)) from e
+        raise ValidationError() from e
 
 
 @router.delete('/routes')
@@ -112,7 +112,7 @@ def create_route_response(
             route.responses.append(new_response)
             return route
         except pydantic.ValidationError as e:
-            raise ValidationError(str(e)) from e
+            raise ValidationError() from e
     raise ResourceNotFoundError(f'Route "{route_id}" was not found.')
 
 
@@ -138,7 +138,7 @@ def delete_route_response_validator(
                 route.validate_existing_response_validator_combinations()
             except pydantic.ValidationError as e:
                 route.response_validators.append(validator)
-                raise ValidationError(str(e)) from e
+                raise ValidationError() from e
             return route
         raise ResourceNotFoundError(f'Response_validator "{validator_id}" was not found in route "{route_id}".')
     raise ResourceNotFoundError(f'Route "{route_id}" was not found.')
