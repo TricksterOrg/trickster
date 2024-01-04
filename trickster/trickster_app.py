@@ -9,6 +9,7 @@ from trickster.meta import get_metadata
 from trickster.openapi import OpenApiSpec
 from trickster.router import get_router
 from trickster.logger import get_logger
+from trickster.exception_handler import request_error_handlers
 
 
 def load_openapi_routes() -> None:
@@ -31,7 +32,8 @@ def create_app() -> FastAPI:
         title=metadata.name,
         version=metadata.version,
         description=metadata.description,
-        docs_url=f'{config.internal_prefix}/docs'
+        docs_url=f'{config.internal_prefix}/docs',
+        exception_handlers=request_error_handlers
     )
     app.include_router(internal.router, prefix=config.internal_prefix)
     app.include_router(mocked.router)

@@ -14,8 +14,9 @@ import time
 import jsonschema
 from typing_extensions import Annotated
 from pydantic import BaseModel, Field, model_serializer, model_validator, ConfigDict
-from fastapi import Request, HTTPException, status
+from fastapi import Request
 from fastapi.responses import JSONResponse
+from trickster.exceptions import AuthenticationError
 
 from typing import Any, Literal, Union
 
@@ -128,8 +129,10 @@ class ResponseValidator(BaseModel):
             raise ValueError('Route response validation failed.')
         try:
             jsonschema.validate(response.body, self.json_schema)
-        except jsonschema.exceptions.ValidationError:
-            raise ValueError('JsonSchema validation failed.')
+        except jsonschema.exceptions.ValidationError as e:
+            raise ValueError(f'JsonSchema validation failed with message {e.message} on instance {e.instance}') from e
+        except jsonschema.exceptions.SchemaError as e:
+            raise ValueError(f'JsonSchema validation failed: {e.message}') from e
 
 
 class RouteMatch(BaseModel):
@@ -267,20 +270,14 @@ class TokenAuth(Auth):
         """Get value of http header containing authentication token."""
         header = request.headers.get('Authorization')
         if not header:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Missing authentication header "Authorization".'
-            )
+            raise AuthenticationError('Missing authentication header "Authorization".')
         return header
 
     def _get_token(self, header: str) -> str:
         """Get authetication token from http header."""
         match = re.match(r'Bearer (?P<token>.*)', header)
         if not match:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f'Invalid authentication header {header}.'
-            )
+            raise AuthenticationError(f'Invalid authentication header {header}.')
 
         return match['token']
 
@@ -289,10 +286,7 @@ class TokenAuth(Auth):
         header = self._get_header(request)
         token = self._get_token(header)
         if token != self.token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f'Authentication token {token} doens\'t match {self.token}.'
-            )
+            raise AuthenticationError(f'Authentication token {token} doesn\'t match {self.token}.')
 
 
 class Route(BaseModel):
