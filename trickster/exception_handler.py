@@ -45,12 +45,12 @@ request_error_handlers: dict[
     int | type[Exception],
     Callable[[fastapi.Request, Any], Coroutine[Any, Any, fastapi.responses.Response]]
 ] = {
-    ValidationError: handle_validation_error,
-    AuthenticationError: handle_authentication_error,
-    ResourceNotFoundError: handle_resource_not_found_error,
     fastapi.exceptions.RequestValidationError: handle_validation_error,
     fastapi.exceptions.ResponseValidationError: handle_validation_error,
     fastapi.exceptions.ValidationException: handle_validation_error,
+    ValidationError: handle_validation_error,
+    AuthenticationError: handle_authentication_error,
+    ResourceNotFoundError: handle_resource_not_found_error,
     ValueError: handle_validation_error,
     jsonschema.exceptions.ValidationError: handle_validation_error,
 }

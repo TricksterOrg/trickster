@@ -129,10 +129,10 @@ class ResponseValidator(BaseModel):
             raise ValueError('Route response validation failed.')
         try:
             jsonschema.validate(response.body, self.json_schema)
-        except jsonschema.exceptions.ValidationError as exception:
-            raise ValueError(f'JsonSchema validation failed with message {exception.message} on instance {exception.instance}')
-        except jsonschema.exceptions.SchemaError as exception:
-            raise ValueError(f'JsonSchema validation failed: {exception.message}')
+        except jsonschema.exceptions.ValidationError as e:
+            raise ValueError(f'JsonSchema validation failed with message {e.message} on instance {e.instance}') from e
+        except jsonschema.exceptions.SchemaError as e:
+            raise ValueError(f'JsonSchema validation failed: {e.message}') from e
 
 
 class RouteMatch(BaseModel):

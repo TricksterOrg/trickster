@@ -47,8 +47,8 @@ def create_route(route: InputRoute, mocked_router: Router = Depends(get_router))
         new_route.validate_existing_response_validator_combinations()
         mocked_router.add_route(new_route)
         return new_route
-    except pydantic.ValidationError as exception:
-        raise ValidationError(str(exception))
+    except pydantic.ValidationError as e:
+        raise ValidationError(str(e)) from e
 
 
 @router.delete('/routes')
@@ -111,8 +111,8 @@ def create_route_response(
             route.validate_new_response(new_response)
             route.responses.append(new_response)
             return route
-        except pydantic.ValidationError as exception:
-            raise ValidationError(str(exception))
+        except pydantic.ValidationError as e:
+            raise ValidationError(str(e)) from e
     raise ResourceNotFoundError(f'Route "{route_id}" was not found.')
 
 
@@ -136,9 +136,9 @@ def delete_route_response_validator(
             route.response_validators.remove(validator)
             try:
                 route.validate_existing_response_validator_combinations()
-            except pydantic.ValidationError as exception:
+            except pydantic.ValidationError as e:
                 route.response_validators.append(validator)
-                raise ValidationError(str(exception))
+                raise ValidationError(str(e)) from e
             return route
         raise ResourceNotFoundError(f'Response_validator "{validator_id}" was not found in route "{route_id}".')
     raise ResourceNotFoundError(f'Route "{route_id}" was not found.')
@@ -164,8 +164,8 @@ def create_route_response_validator(
             route.validate_new_response_validator(new_validator)
             route.response_validators.append(new_validator)
             return route
-        except pydantic.ValidationError as exception:
-            raise ValidationError(f'Failed validation: {str(exception)}')
+        except pydantic.ValidationError as e:
+            raise ValidationError(f'Failed validation: {str(e)}') from e
     raise ResourceNotFoundError(f'Route "{route_id}" was not found.')
 
 
@@ -184,8 +184,8 @@ def create_error_response(response: InputResponse, mocked_router: Router = Depen
         new_response = Response(**response.model_dump())
         mocked_router.add_error_response(new_response)
         return new_response
-    except pydantic.ValidationError as exception:
-        raise ValidationError(f'Failed validation: {str(exception)}')
+    except pydantic.ValidationError as e:
+        raise ValidationError(f'Failed validation: {str(e)}') from e
 
 
 @router.delete('/settings/error_responses')

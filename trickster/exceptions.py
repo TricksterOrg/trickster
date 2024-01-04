@@ -4,11 +4,11 @@
 class TricksterBaseError(Exception):
     """Base class for Job Matching exceptions."""
 
-    def __init__(self, detail: str) -> None:
-        self.detail = detail
-
-    def __str__(self) -> str:  # noqa: D105
-        return self.detail
+    def __str__(self) -> str:
+        if self.args:
+            return self.args[0]
+        else:
+            return str(self.__cause__)
 
 
 class ValidationError(TricksterBaseError):
