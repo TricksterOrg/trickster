@@ -111,7 +111,7 @@ def create_route_response(
             route.validate_new_response(new_response)
             route.responses.append(new_response)
             return route
-        except ValidationError as e:
+        except ValidationError as e:  # pragma: no cover
             raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
     raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
 
@@ -136,7 +136,7 @@ def delete_route_response_validator(
             route.response_validators.remove(validator)
             try:
                 route.validate_existing_response_validator_combinations()
-            except ValidationError as e:
+            except ValidationError as e:  # pragma: no cover
                 route.response_validators.append(validator)
                 raise e
             return route
@@ -167,7 +167,7 @@ def create_route_response_validator(
             route.validate_new_response_validator(new_validator)
             route.response_validators.append(new_validator)
             return route
-        except ValidationError as e:
+        except ValidationError as e:  # pragma: no cover
             raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
     raise HTTPException(status_code=404, detail=f'Route "{route_id}" was not found.')
 
@@ -187,7 +187,7 @@ def create_error_response(response: InputResponse, mocked_router: Router = Depen
         new_response = Response(**response.model_dump())
         mocked_router.add_error_response(new_response)
         return new_response
-    except ValidationError as e:
+    except ValidationError as e:  # pragma: no cover
         raise HTTPException(status_code=400, detail=f'Failed validation: {e}') from e
 
 

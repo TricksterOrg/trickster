@@ -25,37 +25,47 @@ def mocked_config(mocker, request):
 
 
 @pytest.fixture(scope='function')
-def mocked_empty_router():
-    get_router().cache_clear()
-    yield get_router()
-    get_router().cache_clear()
-
-@pytest.fixture(scope='function')
-def mocked_router(mocked_openapi, mocked_config):
-    route = Route(**{
+def mocked_router():
+    payload_route = {
         'path': '/users',
+        'response_selector': 'first',
         'responses': [
-            {'status_code': http.HTTPStatus.OK, 'body': {'user_id': 1234, 'user_name': 'John Doe'}}
+            {
+                'status_code': http.HTTPStatus.OK, 'body': {'user_id': 1234, 'user_name': 'Mark Twain'}
+            },
+            {
+                'status_code': http.HTTPStatus.OK, 'body': {'user_id': 5678, 'user_name': 'Charles Dickens'}
+            }
         ],
-        'http_method': http.HTTPMethod.POST,
+        'http_methods': [http.HTTPMethod.GET],
         'response_validators': [
             {
                 'status_code': http.HTTPStatus.OK,
                 'json_schema': {
                     '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'properties': {'body': {'type': 'object'}}
+                    'required': ['user_id'],
+                    'properties': {'user_id': {'type': 'number'}, 'user_name': {'type': 'string'}}
                 }
             }
         ]
     }
-    )
 
-    get_router().cache_clear()  # Empty router
-    get_router(mocked_config).add_route(route)
+    router = get_router(config=get_config())
+    router.add_route(Route(**payload_route))
 
-    yield
+    yield router
 
-    get_router().cache_clear()
+    get_router.cache_clear()
+
+
+@pytest.fixture(scope='function')
+def mocked_router_empty():
+    get_router.cache_clear()
+    router = get_router(config=get_config())
+
+    yield router
+
+    get_router.cache_clear()
 
 
 @pytest.fixture(scope='session')

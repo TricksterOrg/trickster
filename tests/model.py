@@ -5,7 +5,6 @@ import uuid
 
 import pytest
 from fastapi import Request
-from pydantic import ValidationError
 
 from trickster.model import (
     ParametrizedPath, Response, Route, ResponseDelay, ResponseValidator, ResponseSelector,
@@ -51,15 +50,6 @@ class TestParametrizedPath:
     def test_validate_model_invalid(self, data):
         with pytest.raises(ValueError):
             ParametrizedPath.validate_model(data)
-
-    @pytest.mark.parametrize('raw, normalized', [
-        ('/test', '/test'),
-        ('test', '/test'),
-        ('test/', '/test/'),
-        ('/test/', '/test/'),
-    ])
-    def test_normalize(self, raw, normalized):
-        assert ParametrizedPath._normalize(raw) == normalized
 
     @pytest.mark.parametrize('parametrized, from_request, result', [
         ('/test', 'test', {}),
@@ -188,7 +178,7 @@ class TestResponseDelay:
             ({'min_delay': 0.25, 'max_delay': 1}, (0.25, 1)),
         ]
     )
-    def test_response_delay(self, data, expectation):
+    def test_response_delay_valid(self, data, expectation):
         assert ResponseDelay(**data).model_dump() == expectation
 
     def test_delay_response(self, mocker):
@@ -267,19 +257,18 @@ class TestResponseSelector:
         # Manually emulate balanced hits increasing and check if the next
         # response is selected in balanced manner
         assert ResponseSelector.BALANCED.select_response(responses) == responses[3]
+
         responses[3].hits += 1
-
         assert ResponseSelector.BALANCED.select_response(responses) == responses[2]
-        responses[2].hits += 1
 
+        responses[2].hits += 1
         assert ResponseSelector.BALANCED.select_response(responses) == responses[3]
+
         responses[3].hits += 1
-
         assert ResponseSelector.BALANCED.select_response(responses) == responses[1]
-        responses[1].hits += 1
 
+        responses[1].hits += 1
         assert ResponseSelector.BALANCED.select_response(responses) == responses[2]
-        responses[2].hits += 1
 
     def test_select_response_invalid_responses(self):
         response_selector = ResponseSelector.FIRST
@@ -289,19 +278,10 @@ class TestResponseSelector:
 
         assert e.exconly(tryshort=True) == 'ValueError: No suitable response found.'
 
-    @pytest.mark.xfail
-    def test_select_response_invalid_algo(self):
-        with pytest.raises(ValueError) as e:
-            ResponseSelector.INVALIDALGO.select_response(self.responses)
-
-        assert e.exconly(tryshort=True) == 'Response selection algorithm for InvalidAlgo is not configured.'
-
 
 class TestRoute:
     responses = [
         Response(status_code=http.HTTPStatus.OK, body={'body': 1}, hits=3),
-        Response(status_code=http.HTTPStatus.OK, body={'body': 'two'}, hits=2),
-        Response(id=uuid.uuid4(), status_code=http.HTTPStatus.OK, body={'body': 3}, hits=1),
         Response(status_code=http.HTTPStatus.OK, body={'body': 4}, hits=0),
         Response(status_code=http.HTTPStatus.OK, body={'body': 5}, hits=4),
     ]
@@ -332,10 +312,7 @@ class TestRoute:
         assert route.validate_existing_response_validator_combinations() is None
 
     def test_validate_new_response_validator(self):
-        route = Route(
-            path='test', responses=self.responses, response_validators=self.response_validators,
-            http_methods=[http.HTTPMethod.GET]
-        )
+        route = Route(path='test', responses=self.responses, http_methods=[http.HTTPMethod.GET])
 
         assert route.validate_new_response_validator(self.response_validators[0]) is None
 

@@ -1,12 +1,9 @@
-import importlib.util
-
 import pytest
 from fastapi import FastAPI
 
-from trickster.trickster_app import create_app, load_openapi_routes, main
+from trickster.trickster_app import create_app, load_openapi_routes
 from trickster.router import get_router
 from trickster.config import get_config
-from trickster.meta import project_root
 
 
 class TestCreateApp:

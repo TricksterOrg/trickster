@@ -85,7 +85,10 @@ class TestRouter:
         assert Router(routes=routes).get_route_by_id(route_id) == routes[0]
 
     def test_get_error_response(self):
-        router = Router(routes=self.routes, error_responses=self.error_responses, error_response_selector=ResponseSelector.FIRST)
+        router = Router(
+            routes=self.routes, error_responses=self.error_responses,
+            error_response_selector=ResponseSelector.FIRST
+        )
 
         assert router.get_error_response(http.HTTPStatus.NOT_FOUND) == self.error_responses[0]
         assert Router(routes=self.routes).get_error_response(http.HTTPStatus.NOT_FOUND) is None
@@ -94,7 +97,7 @@ class TestRouter:
         router = Router(routes=self.routes, error_responses=self.error_responses)
 
         assert router.get_error_responses() == self.error_responses
-        assert router.get_error_responses(http.HTTPStatus.BAD_REQUEST) == [self.error_responses[1], self.error_responses[2]]
+        assert router.get_error_responses(http.HTTPStatus.BAD_REQUEST) == self.error_responses[1:]
 
     def test_add_error_response(self):
         router = Router(routes=self.routes)

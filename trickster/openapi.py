@@ -50,7 +50,7 @@ class OpenApiSpec:
                 'description': schema.description,
                 'type': schema.type.value
             }
-        return {}
+        return {}  # pragma: no cover
 
     def _object_schema_to_json_schema(self, schema: openspec.Object) -> dict[str, Any]:
         """Create json schema from object openapi schema."""

@@ -196,6 +196,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SomeFakeThing'
+          description: Some fake response
       summary: Create Item
   /search:
     post:
