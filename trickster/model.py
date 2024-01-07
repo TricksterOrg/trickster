@@ -416,4 +416,4 @@ class InputRoute(BaseModel):
     http_methods: list[http.HTTPMethod] = [http.HTTPMethod.GET]
     response_validators: list[ResponseValidator] = []
     response_selector: ResponseSelector = ResponseSelector.RANDOM
-    auth: Union[Auth.get_subclasses()] | None = Field(discriminator='method')  # type: ignore
+    auth: Union[Auth.get_subclasses()] | None = Field(discriminator='method', default=None)  # type: ignore

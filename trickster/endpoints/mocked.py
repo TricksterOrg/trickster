@@ -21,13 +21,14 @@ def mocked_response(request: Request, mocked_router: Router = Depends(get_router
     response = None
 
     if match := mocked_router.match(request):  # noqa: SIM102 - nested if statements
+        match.route.hits += 1
         try:
             match.route.authenticate(request)
             if matched_response := match.route.get_response(match):
-                match.route.hits += 1
                 response = matched_response
         except AuthenticationError:
-            response = mocked_router.get_error_response(status_code=http.HTTPStatus.UNAUTHORIZED)
+            response = match.route.auth.error_response or \
+                mocked_router.get_error_response(status_code=http.HTTPStatus.UNAUTHORIZED)
     elif error_response := mocked_router.get_error_response(status_code=http.HTTPStatus.NOT_FOUND):
         response = error_response
 
