@@ -174,12 +174,28 @@ class TestResponseDelay:
         'data, expectation',
         [
             ({}, (0, 0)),
+            (1, (1, 1)),
+            ([1, 3], (1, 3)),
+            ((1, 2), (1, 2)),
             ({'min_delay': 0.25}, (0.25, 0.25)),
             ({'min_delay': 0.25, 'max_delay': 1}, (0.25, 1)),
         ]
     )
     def test_response_delay_valid(self, data, expectation):
-        assert ResponseDelay(**data).model_dump() == expectation
+        assert ResponseDelay.model_validate(data).model_dump() == expectation
+
+    @pytest.mark.parametrize(
+        'data, expectation',
+        [
+            ([1, 3, 4], 'Input of response delay must be a single value or list of two numbers.'),
+            ([3, 1], 'Maximum delay (1s) must be greater than minimum delay (3s).'),
+        ]
+    )
+    def test_response_delay_invalid(self, data, expectation):
+        with pytest.raises(ValueError) as e:
+            ResponseDelay.model_validate(data).model_dump()
+
+            assert e.exconly(tryshort=True) == expectation
 
     def test_delay_response(self, mocker):
         response_delay = ResponseDelay(min_delay=1.57, max_delay=1.57)
@@ -494,96 +510,96 @@ class TestInputRoute:
                 }
             ),
             (
-                    {
-                        'path': '/test',
-                        'responses': []
-                    },
-                    {
-                        'http_methods': [http.HTTPMethod.GET],
-                        'path': '/test',
-                        'response_selector': ResponseSelector.RANDOM,
-                        'response_validators': [],
-                        'responses': []
-                    }
+                {
+                    'path': '/test',
+                    'responses': []
+                },
+                {
+                    'http_methods': [http.HTTPMethod.GET],
+                    'path': '/test',
+                    'response_selector': ResponseSelector.RANDOM,
+                    'response_validators': [],
+                    'responses': []
+                }
             ),
             (
-                    {
-                        'path': '/test',
-                        'responses': [{'status_code': 200, 'body': {}}],
-                    },
-                    {
-                        'http_methods': [http.HTTPMethod.GET],
-                        'path': '/test',
-                        'response_selector': ResponseSelector.RANDOM,
-                        'response_validators': [],
-                        'responses': [
-                            {
-                                'body': {},
-                                'delay': (0, 0),
-                                'headers': {},
-                                'status_code': http.HTTPStatus.OK,
-                                'weight': 1
-                            }
-                        ],
-                    }
+                {
+                    'path': '/test',
+                    'responses': [{'status_code': 200, 'body': {}}],
+                },
+                {
+                    'http_methods': [http.HTTPMethod.GET],
+                    'path': '/test',
+                    'response_selector': ResponseSelector.RANDOM,
+                    'response_validators': [],
+                    'responses': [
+                        {
+                            'body': {},
+                            'delay': (0, 0),
+                            'headers': {},
+                            'status_code': http.HTTPStatus.OK,
+                            'weight': 1
+                        }
+                    ],
+                }
             ),
             (
-                    {
-                        'path': '/test',
-                        'responses': [{'status_code': 200, 'body': {}}],
-                        'http_methods': [http.HTTPMethod.POST],
-                        'response_validators': [
-                            ResponseValidator(
-                                id=uuid.UUID('e647ef2e-a945-4649-a8ea-5deccaf159e5'),
-                                status_code=http.HTTPStatus.OK,
-                                json_schema={
-                                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                                    'properties': {'body': {'type': 'number'}}
-                                },
-                            ),
-                            ResponseValidator(
-                                id=uuid.UUID('ec2a2765-2fc0-4aa1-9fd5-2b6f2385d82d'),
-                                status_code=http.HTTPStatus.OK,
-                                json_schema={
-                                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                                    'properties': {'body': {'type': 'string'}}
-                                },
-                            )
-                        ],
-                        'response_selector': ResponseSelector.FIRST,
-                    },
-                    {
-                        'http_methods': [http.HTTPMethod.POST],
-                        'path': '/test',
-                        'response_selector': ResponseSelector.FIRST,
-                        'response_validators': [
-                            {
-                                'id': uuid.UUID('e647ef2e-a945-4649-a8ea-5deccaf159e5'),
-                                'status_code': http.HTTPStatus.OK,
-                                'json_schema': {
-                                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                                    'properties': {'body': {'type': 'number'}}
-                                },
+                {
+                    'path': '/test',
+                    'responses': [{'status_code': 200, 'body': {}}],
+                    'http_methods': [http.HTTPMethod.POST],
+                    'response_validators': [
+                        ResponseValidator(
+                            id=uuid.UUID('e647ef2e-a945-4649-a8ea-5deccaf159e5'),
+                            status_code=http.HTTPStatus.OK,
+                            json_schema={
+                                '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                                'properties': {'body': {'type': 'number'}}
                             },
-                            {
-                                'id': uuid.UUID('ec2a2765-2fc0-4aa1-9fd5-2b6f2385d82d'),
-                                'status_code': http.HTTPStatus.OK,
-                                'json_schema': {
-                                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                                    'properties': {'body': {'type': 'string'}}
-                                },
-                            }
-                        ],
-                        'responses': [
-                            {
-                                'body': {},
-                                'delay': (0, 0),
-                                'headers': {},
-                                'status_code': http.HTTPStatus.OK,
-                                'weight': 1
-                            }
-                        ],
-                    }
+                        ),
+                        ResponseValidator(
+                            id=uuid.UUID('ec2a2765-2fc0-4aa1-9fd5-2b6f2385d82d'),
+                            status_code=http.HTTPStatus.OK,
+                            json_schema={
+                                '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                                'properties': {'body': {'type': 'string'}}
+                            },
+                        )
+                    ],
+                    'response_selector': ResponseSelector.FIRST,
+                },
+                {
+                    'http_methods': [http.HTTPMethod.POST],
+                    'path': '/test',
+                    'response_selector': ResponseSelector.FIRST,
+                    'response_validators': [
+                        {
+                            'id': uuid.UUID('e647ef2e-a945-4649-a8ea-5deccaf159e5'),
+                            'status_code': http.HTTPStatus.OK,
+                            'json_schema': {
+                                '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                                'properties': {'body': {'type': 'number'}}
+                            },
+                        },
+                        {
+                            'id': uuid.UUID('ec2a2765-2fc0-4aa1-9fd5-2b6f2385d82d'),
+                            'status_code': http.HTTPStatus.OK,
+                            'json_schema': {
+                                '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                                'properties': {'body': {'type': 'string'}}
+                            },
+                        }
+                    ],
+                    'responses': [
+                        {
+                            'body': {},
+                            'delay': (0, 0),
+                            'headers': {},
+                            'status_code': http.HTTPStatus.OK,
+                            'weight': 1
+                        }
+                    ],
+                }
             ),
         ]
     )

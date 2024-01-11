@@ -14,6 +14,26 @@ class TestHealthcheck:
 
 
 class TestInternalEndpoints:
+    payload_route = {
+        'path': '/items',
+        'responses': [
+            {
+                'status_code': http.HTTPStatus.OK, 'body': {'user_id': 1234, 'user_name': 'Mark Twain'}
+            }
+        ],
+        'http_methods': [http.HTTPMethod.POST],
+        'response_validators': [
+            {
+                'status_code': http.HTTPStatus.OK,
+                'json_schema': {
+                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                    'required': ['user_id'],
+                    'properties': {'user_id': {'type': 'number'}, 'user_name': {'type': 'string'}}
+                }
+            }
+        ]
+    }
+
     payload_response_validator = {
         'status_code': http.HTTPStatus.OK,
         'json_schema': {
@@ -24,51 +44,48 @@ class TestInternalEndpoints:
 
     payload_error_response = {'status_code': http.HTTPStatus.FORBIDDEN, 'body': {'detail': 'It is forbidden.'}}
 
-    expected_routes_response = [{
-        'hits': 0,
-        'response_selector': 'first',
-        'http_methods': ['GET'],
-        'path': '/users',
-        'response_validators': [
-            {
-                'status_code': 200,
-                'json_schema': {
-                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                    'required': ['user_id'],
-                    'properties': {'user_id': {'type': 'number'}, 'user_name': {'type': 'string'}}
-                }
-            }
-        ],
-        'responses': [
-            {
-                'body': {'user_id': 1234, 'user_name': 'Mark Twain'},
-                'delay': [0.0, 0.0],
-                'headers': {},
-                'hits': 0,
-                'status_code': 200,
-                'weight': 1.0
-            }, {
-                'body': {'user_id': 5678, 'user_name': 'Charles Dickens'},
-                'delay': [0.0, 0.0],
-                'headers': {},
-                'hits': 0,
-                'status_code': 200,
-                'weight': 1.0
-            }
-        ]
-    }]
-
     def test_get_routes(self, mocked_config, mocked_router, client):
-        expected_routes = copy.deepcopy(self.expected_routes_response)
-        expected_routes[0]['id'] = str(mocked_router.routes[0].id)
-        expected_routes[0]['response_validators'][0]['id'] = str(mocked_router.routes[0].response_validators[0].id)
-        expected_routes[0]['responses'][0]['id'] = str(mocked_router.routes[0].responses[0].id)
-        expected_routes[0]['responses'][1]['id'] = str(mocked_router.routes[0].responses[1].id)
+        expected_routes = [{
+            'id': str(mocked_router.routes[0].id),
+            'hits': 0,
+            'response_selector': 'first',
+            'http_methods': ['GET'],
+            'path': '/users',
+            'response_validators': [
+                {
+                    'id': str(mocked_router.routes[0].response_validators[0].id),
+                    'status_code': 200,
+                    'json_schema': {
+                        '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                        'required': ['user_id'],
+                        'properties': {'user_id': {'type': 'number'}, 'user_name': {'type': 'string'}}
+                    }
+                }
+            ],
+            'responses': [
+                {
+                    'id': str(mocked_router.routes[0].responses[0].id),
+                    'body': {'user_id': 1234, 'user_name': 'Mark Twain'},
+                    'delay': [0.0, 0.0],
+                    'headers': {},
+                    'hits': 0,
+                    'status_code': 200,
+                    'weight': 1.0
+                }, {
+                    'id': str(mocked_router.routes[0].responses[1].id),
+                    'body': {'user_id': 5678, 'user_name': 'Charles Dickens'},
+                    'delay': [0.0, 0.0],
+                    'headers': {},
+                    'hits': 0,
+                    'status_code': 200,
+                    'weight': 1.0
+                }
+            ]
+        }]
 
         result = client.get(f'{mocked_config.internal_prefix}/routes')
 
         assert result.status_code == 200
-
         assert result.json() == expected_routes
 
     def test_get_route(self, mocked_config, mocked_router, client):
@@ -79,6 +96,7 @@ class TestInternalEndpoints:
         assert result.status_code == 200
         assert result.json()['id'] == str(mocked_router.routes[0].id)
 
+    def test_get_route_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         result = client.get(f'{mocked_config.internal_prefix}/routes/{non_existent_id}')
 
@@ -86,32 +104,14 @@ class TestInternalEndpoints:
         assert result.json() == {'detail': f'Route ID "{non_existent_id}" was not found.'}
 
     def test_create_route(self, mocked_router_empty, mocked_config, client):
-        route = {
-            'path': '/items',
-            'responses': [
-                {
-                    'status_code': http.HTTPStatus.OK, 'body': {'user_id': 1234, 'user_name': 'Mark Twain'}
-                }
-            ],
-            'http_methods': [http.HTTPMethod.POST],
-            'response_validators': [
-                {
-                    'status_code': http.HTTPStatus.OK,
-                    'json_schema': {
-                        '$schema': 'https://json-schema.org/draft/2020-12/schema',
-                        'required': ['user_id'],
-                        'properties': {'user_id': {'type': 'number'}, 'user_name': {'type': 'string'}}
-                    }
-                }
-            ]
-        }
-        additional_response_invalid = {'status_code': http.HTTPStatus.OK, 'body': {'user_name': 'Arthur Clarke'}}
-
-        result = client.post(f'{mocked_config.internal_prefix}/routes', json=route)
+        result = client.post(f'{mocked_config.internal_prefix}/routes', json=self.payload_route)
 
         assert result.status_code == http.HTTPStatus.OK
         assert result.json()['id'] == str(mocked_router_empty.routes[0].id)
 
+    def test_create_route_invalid(self, mocked_router_empty, mocked_config, client):
+        route = copy.deepcopy(self.payload_route)
+        additional_response_invalid = {'status_code': http.HTTPStatus.OK, 'body': {'user_name': 'Arthur Clarke'}}
         route['responses'].append(additional_response_invalid)
 
         result = client.post(f'{mocked_config.internal_prefix}/routes', json=route)
@@ -153,6 +153,7 @@ class TestInternalEndpoints:
         assert len(result_body) != 0
         assert route_id not in [i['id'] for i in result_body]
 
+    def test_delete_route_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         result = client.delete(f'{mocked_config.internal_prefix}/routes/{non_existent_id}')
 
@@ -170,6 +171,7 @@ class TestInternalEndpoints:
         assert result_body[0]['body'] == mocked_router.routes[0].responses[0].body
         assert result_body[0]['status_code'] == mocked_router.routes[0].responses[0].status_code
 
+    def test_get_route_responses_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         result = client.get(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses')
 
@@ -188,7 +190,11 @@ class TestInternalEndpoints:
         assert len(result_body) != 0
         assert response_id not in [i['id'] for i in result_body['responses']]
 
+    def test_delete_route_response_non_existent(self, mocked_config, mocked_router, client):
+        route_id = str(mocked_router.routes[0].id)
+        response_id = str(mocked_router.routes[0].responses[0].id)
         non_existent_id = uuid.uuid4()
+
         result = client.delete(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses/{response_id}')
 
         assert result.status_code == 404
@@ -208,6 +214,7 @@ class TestInternalEndpoints:
 
         assert result.json()['responses'] == []
 
+    def test_delete_route_responses_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         result = client.delete(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses')
 
@@ -225,7 +232,9 @@ class TestInternalEndpoints:
         assert result_body['responses'][2]['body'] == new_response['body']
         assert result_body['responses'][2]['status_code'] == new_response['status_code']
 
+    def test_create_route_response_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
+        new_response = {'status_code': http.HTTPStatus.OK, 'body': {'user_id': 6767, 'some': 'field'}}
         result = client.post(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses', json=new_response)
 
         assert result.status_code == 404
@@ -245,6 +254,7 @@ class TestInternalEndpoints:
         assert result_body[1]['json_schema'] == mocked_router.routes[0].response_validators[1].json_schema
         assert result_body[1]['status_code'] == mocked_router.routes[0].response_validators[1].status_code
 
+    def test_get_route_response_validators_non_existent_route(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         result = client.get(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators')
 
@@ -265,7 +275,10 @@ class TestInternalEndpoints:
         assert len(result_body['response_validators']) == 1
         assert route_id not in [i['id'] for i in result_body['response_validators']]
 
+    def test_delete_route_response_validator_non_existent(self, mocked_router, mocked_config, client):
         non_existent_id = uuid.uuid4()
+        route_id = mocked_router.routes[0].id
+        response_validator_id = mocked_router.routes[0].response_validators[0].id
         result = client.delete(
             f'{mocked_config.internal_prefix}/routes/{route_id}/response_validators/{non_existent_id}'
         )
@@ -290,6 +303,7 @@ class TestInternalEndpoints:
         assert result.status_code == 200
         assert result.json()['response_validators'] == []
 
+    def test_delete_route_response_validators_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         result = client.delete(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators')
 
@@ -309,6 +323,7 @@ class TestInternalEndpoints:
         assert result_body['response_validators'][1]['json_schema'] == self.payload_response_validator['json_schema']
         assert result_body['response_validators'][1]['status_code'] == self.payload_response_validator['status_code']
 
+    def test_create_route_response_validator_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         result = client.post(
             f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators',
@@ -354,8 +369,14 @@ class TestInternalEndpoints:
         assert result.status_code == 200
         assert error_response_id not in [i['id'] for i in result.json()]
 
+    def test_delete_error_response_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         result = client.delete(f'{mocked_config.internal_prefix}/settings/error_responses/{non_existent_id}')
 
         assert result.status_code == 404
         assert result.json() == {'detail': f'Error response "{non_existent_id}" was not found.'}
+
+    def test_get_non_existent_internal_endpoint(self, mocked_router, mocked_config, client):
+        result = client.get(f'{mocked_config.internal_prefix}/non-existent-path')
+
+        assert result.status_code == 404

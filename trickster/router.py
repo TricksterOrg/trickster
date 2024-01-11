@@ -12,8 +12,7 @@ from starlette.requests import Request
 
 from trickster.config import Config, get_config
 from trickster.model import Route, RouteMatch, Response, ResponseSelector
-import os
-import threading
+
 
 class Router(BaseModel):
     """Router containing routes that can match user request."""
