@@ -735,3 +735,4 @@ class TestInputRoute:
     )
     def test_input_route(self, data, expectation):
         assert InputRoute(**data).model_dump() == expectation
+
