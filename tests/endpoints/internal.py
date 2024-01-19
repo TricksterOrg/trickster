@@ -3,6 +3,7 @@ import http
 import uuid
 
 from trickster.model import Route, Response, ResponseValidator
+from tests.conftest import AUTH_TOKEN
 
 
 class TestHealthcheck:
@@ -47,6 +48,19 @@ class TestInternalEndpoints:
     def test_get_routes(self, mocked_config, mocked_router, client):
         expected_routes = [{
             'id': str(mocked_router.routes[0].id),
+            'auth': {
+                'method': 'token',
+                'token': AUTH_TOKEN,
+                'error_response': {
+                    'id': str(mocked_router.routes[0].auth.error_response.id),
+                    'body': {'auth': 'unauthorized'},
+                    'delay': [0.0, 0.0],
+                    'headers': {},
+                    'hits': 0,
+                    'status_code': 401,
+                    'weight': 1.0,
+                }
+            },
             'hits': 0,
             'response_selector': 'first',
             'http_methods': ['GET'],
@@ -83,7 +97,9 @@ class TestInternalEndpoints:
             ]
         }]
 
-        result = client.get(f'{mocked_config.internal_prefix}/routes')
+        result = client.get(
+            f'{mocked_config.internal_prefix}/routes', headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 200
         assert result.json() == expected_routes
@@ -91,20 +107,28 @@ class TestInternalEndpoints:
     def test_get_route(self, mocked_config, mocked_router, client):
         route_id = mocked_router.routes[0].id
 
-        result = client.get(f'{mocked_config.internal_prefix}/routes/{route_id}')
+        result = client.get(
+            f'{mocked_config.internal_prefix}/routes/{route_id}', headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 200
         assert result.json()['id'] == str(mocked_router.routes[0].id)
 
     def test_get_route_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
-        result = client.get(f'{mocked_config.internal_prefix}/routes/{non_existent_id}')
+        result = client.get(
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route ID "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route ID "{non_existent_id}" was not found.'}
 
     def test_create_route(self, mocked_router_empty, mocked_config, client):
-        result = client.post(f'{mocked_config.internal_prefix}/routes', json=self.payload_route)
+        result = client.post(
+            f'{mocked_config.internal_prefix}/routes', json=self.payload_route,
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == http.HTTPStatus.OK
         assert result.json()['id'] == str(mocked_router_empty.routes[0].id)
@@ -114,13 +138,18 @@ class TestInternalEndpoints:
         additional_response_invalid = {'status_code': http.HTTPStatus.OK, 'body': {'user_name': 'Arthur Clarke'}}
         route['responses'].append(additional_response_invalid)
 
-        result = client.post(f'{mocked_config.internal_prefix}/routes', json=route)
+        result = client.post(
+            f'{mocked_config.internal_prefix}/routes', json=route,
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 400
-        assert result.json()['detail'].startswith('Failed validation:')
+        assert result.json()['error'] == 'Validation error'
 
     def test_delete_routes(self, mocked_config, mocked_router, client):
-        result = client.delete(f'{mocked_config.internal_prefix}/routes')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/routes', headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 200
         assert result.json() == []
@@ -145,7 +174,9 @@ class TestInternalEndpoints:
         mocked_router.add_route(Route(**additional_payload))
         route_id = mocked_router.routes[0].id
 
-        result = client.delete(f'{mocked_config.internal_prefix}/routes/{route_id}')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/routes/{route_id}', headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
         result_body = result.json()
 
         assert result.status_code == http.HTTPStatus.OK
@@ -155,15 +186,21 @@ class TestInternalEndpoints:
 
     def test_delete_route_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
-        result = client.delete(f'{mocked_config.internal_prefix}/routes/{non_existent_id}')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
     def test_get_route_responses(self, mocked_router, mocked_config, client):
         route_id = mocked_router.routes[0].id
 
-        result = client.get(f'{mocked_config.internal_prefix}/routes/{route_id}/responses')
+        result = client.get(
+            f'{mocked_config.internal_prefix}/routes/{route_id}/responses',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
         result_body = result.json()
 
         assert result.status_code == 200
@@ -173,16 +210,22 @@ class TestInternalEndpoints:
 
     def test_get_route_responses_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
-        result = client.get(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses')
+        result = client.get(
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
     def test_delete_route_response(self, mocked_config, mocked_router, client):
         route_id = str(mocked_router.routes[0].id)
         response_id = str(mocked_router.routes[0].responses[0].id)
 
-        result = client.delete(f'{mocked_config.internal_prefix}/routes/{route_id}/responses/{response_id}')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/routes/{route_id}/responses/{response_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
         result_body = result.json()
 
         assert result.status_code == 200
@@ -195,20 +238,26 @@ class TestInternalEndpoints:
         response_id = str(mocked_router.routes[0].responses[0].id)
         non_existent_id = uuid.uuid4()
 
-        result = client.delete(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses/{response_id}')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses/{response_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
         result = client.delete(f'{mocked_config.internal_prefix}/routes/{route_id}/responses/{non_existent_id}')
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Response "{non_existent_id}" was not found in route "{route_id}".'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Response "{non_existent_id}" was not found in route "{route_id}".'}
 
     def test_delete_route_responses(self, mocked_config, mocked_router, client):
         route_id = mocked_router.routes[0].id
 
-        result = client.delete(f'internal/routes/{route_id}/responses')
+        result = client.delete(
+            f'internal/routes/{route_id}/responses',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 200
 
@@ -216,16 +265,23 @@ class TestInternalEndpoints:
 
     def test_delete_route_responses_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
-        result = client.delete(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
     def test_create_route_response(self, mocked_router, mocked_config, client):
         route_id = mocked_router.routes[0].id
         new_response = {'status_code': http.HTTPStatus.OK, 'body': {'user_id': 6767, 'some': 'field'}}
 
-        result = client.post(f'{mocked_config.internal_prefix}/routes/{route_id}/responses', json=new_response)
+        result = client.post(
+            f'{mocked_config.internal_prefix}/routes/{route_id}/responses',
+            json=new_response,
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
         result_body = result.json()
 
         assert result.status_code == 200
@@ -235,16 +291,23 @@ class TestInternalEndpoints:
     def test_create_route_response_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
         new_response = {'status_code': http.HTTPStatus.OK, 'body': {'user_id': 6767, 'some': 'field'}}
-        result = client.post(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses', json=new_response)
+
+        result = client.post(
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}/responses',
+            json=new_response,
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
     def test_get_route_response_validators(self, mocked_router, mocked_config, client):
         mocked_router.routes[0].response_validators.append(ResponseValidator(**self.payload_response_validator))
         route_id = mocked_router.routes[0].id
 
-        result = client.get(f'internal/routes/{route_id}/response_validators')
+        result = client.get(
+            f'internal/routes/{route_id}/response_validators', headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
         result_body = result.json()
 
         assert result.status_code == 200
@@ -256,10 +319,13 @@ class TestInternalEndpoints:
 
     def test_get_route_response_validators_non_existent_route(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
-        result = client.get(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators')
+        result = client.get(
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
     def test_delete_route_response_validator(self, mocked_router, mocked_config, client):
         mocked_router.routes[0].response_validators.append(ResponseValidator(**self.payload_response_validator))
@@ -267,7 +333,8 @@ class TestInternalEndpoints:
         response_validator_id = mocked_router.routes[0].response_validators[0].id
 
         result = client.delete(
-            f'{mocked_config.internal_prefix}/routes/{route_id}/response_validators/{response_validator_id}'
+            f'{mocked_config.internal_prefix}/routes/{route_id}/response_validators/{response_validator_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
         )
         result_body = result.json()
 
@@ -280,42 +347,52 @@ class TestInternalEndpoints:
         route_id = mocked_router.routes[0].id
         response_validator_id = mocked_router.routes[0].response_validators[0].id
         result = client.delete(
-            f'{mocked_config.internal_prefix}/routes/{route_id}/response_validators/{non_existent_id}'
+            f'{mocked_config.internal_prefix}/routes/{route_id}/response_validators/{non_existent_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
         )
 
         assert result.status_code == 404
         assert result.json() == {
-            'detail': f'Response_validator "{non_existent_id}" was not found in route "{route_id}".'
+            'error': 'Resource error',
+            'reason': f'Response_validator "{non_existent_id}" was not found in route "{route_id}".'
         }
 
         result = client.delete(
-            f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators/{response_validator_id}'
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators/{response_validator_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
         )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
     def test_delete_route_response_validators(self, mocked_router, mocked_config, client):
         route_id = mocked_router.routes[0].id
 
-        result = client.delete(f'{mocked_config.internal_prefix}/routes/{route_id}/response_validators')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/routes/{route_id}/response_validators',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 200
         assert result.json()['response_validators'] == []
 
     def test_delete_route_response_validators_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
-        result = client.delete(f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
     def test_create_route_response_validator(self, mocked_router, mocked_config, client):
         route_id = mocked_router.routes[0].id
 
         result = client.post(
             f'{mocked_config.internal_prefix}/routes/{route_id}/response_validators',
-            json=self.payload_response_validator
+            json=self.payload_response_validator,
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
         )
         result_body = result.json()
 
@@ -327,18 +404,22 @@ class TestInternalEndpoints:
         non_existent_id = uuid.uuid4()
         result = client.post(
             f'{mocked_config.internal_prefix}/routes/{non_existent_id}/response_validators',
-            json=self.payload_response_validator
+            json=self.payload_response_validator,
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
         )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Route "{non_existent_id}" was not found.'}
+        assert result.json() == {'error': 'Resource error', 'reason': f'Route "{non_existent_id}" was not found.'}
 
     def test_get_error_responses(self, mocked_router, mocked_config, client):
         expected_error_responses = [(i.status_code, i.body) for i in mocked_config.settings.error_responses] + \
                                    [(self.payload_error_response['status_code'], self.payload_error_response['body'])]
         mocked_router.add_error_response(Response(**self.payload_error_response))
 
-        result = client.get(f'{mocked_config.internal_prefix}/settings/error_responses')
+        result = client.get(
+            f'{mocked_config.internal_prefix}/settings/error_responses',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 200
         assert [(i['status_code'], i['body']) for i in result.json()] == expected_error_responses
@@ -346,7 +427,8 @@ class TestInternalEndpoints:
     def test_create_error_response(self, mocked_router, mocked_config, client):
         result = client.post(
             f'{mocked_config.internal_prefix}/settings/error_responses',
-            json=self.payload_error_response
+            json=self.payload_error_response,
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
         )
         result_body = result.json()
 
@@ -355,7 +437,10 @@ class TestInternalEndpoints:
         assert result_body['status_code'] == self.payload_error_response['status_code']
 
     def test_delete_error_responses(self, mocked_router, mocked_config, client):
-        result = client.delete(f'{mocked_config.internal_prefix}/settings/error_responses')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/settings/error_responses',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 200
         assert result.json() == []
@@ -364,19 +449,30 @@ class TestInternalEndpoints:
         mocked_router.add_error_response(Response(**self.payload_error_response))
         error_response_id = mocked_router.error_responses[-1].id
 
-        result = client.delete(f'{mocked_config.internal_prefix}/settings/error_responses/{error_response_id}')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/settings/error_responses/{error_response_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 200
         assert error_response_id not in [i['id'] for i in result.json()]
 
     def test_delete_error_response_non_existent(self, mocked_config, client):
         non_existent_id = uuid.uuid4()
-        result = client.delete(f'{mocked_config.internal_prefix}/settings/error_responses/{non_existent_id}')
+        result = client.delete(
+            f'{mocked_config.internal_prefix}/settings/error_responses/{non_existent_id}',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404
-        assert result.json() == {'detail': f'Error response "{non_existent_id}" was not found.'}
+        assert result.json() == {
+            'error': 'Resource error', 'reason': f'Error response "{non_existent_id}" was not found.'
+        }
 
     def test_get_non_existent_internal_endpoint(self, mocked_router, mocked_config, client):
-        result = client.get(f'{mocked_config.internal_prefix}/non-existent-path')
+        result = client.get(
+            f'{mocked_config.internal_prefix}/non-existent-path',
+            headers={'Authorization': f'Bearer {AUTH_TOKEN}'}
+        )
 
         assert result.status_code == 404

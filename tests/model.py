@@ -8,16 +8,19 @@ from fastapi import Request
 
 from trickster.model import (
     ParametrizedPath, Response, Route, ResponseDelay, ResponseValidator, ResponseSelector,
-    RouteMatch, InputResponseValidator, InputResponse, InputRoute, HealthcheckStatus
+    RouteMatch, InputResponseValidator, InputResponse, InputRoute, HealthcheckStatus, TokenAuth
 )
+from trickster.exceptions import AuthenticationError
+from tests.conftest import AUTH_TOKEN
 
 from typing import cast
 
 
 class MockedRequest:
-    def __init__(self, method: str, path_params: dict[str, str]) -> None:
+    def __init__(self, method: str, path_params: dict[str, str], headers: dict[str, str] | None = None) -> None:
         self.method = method
         self.path_params = path_params
+        self.headers = headers
 
 
 class TestParametrizedPath:
@@ -102,8 +105,20 @@ class TestResponseValidator:
                 {'status_code': http.HTTPStatus.OK,
                  'json_schema': {'$schema': 'https://json-schema.org/draft/2020-12/schema', 'type': 'number'}
                  },
-                f'{ValueError.__name__}: JsonSchema validation failed.',
+                f'{ValueError.__name__}: JsonSchema validation failed with message {{\'some\': \'body\'}} '
+                f'is not of type \'number\' on instance {{\'some\': \'body\'}}',
                 id='Invalid response against JSON schema'
+            ),
+            pytest.param(
+                {
+                    'status_code': http.HTTPStatus.OK,
+                    'json_schema': {
+                        '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                        'required': 'some_field'
+                    }
+                },
+                f'{ValueError.__name__}: JsonSchema validation failed: \'some_field\' is not of type \'array\'',
+                id='Invalid JSON schema'
             )
         ]
     )
@@ -131,6 +146,7 @@ class TestRouteMatch:
                     'http_method': http.HTTPMethod.GET,
                     'path_params': {},
                     'route': {
+                        'auth': None,
                         'hits': 0,
                         'http_methods': [http.HTTPMethod.GET],
                         'id': uuid.UUID('70850e6c-7755-4edc-8fc2-12caf5c3d8ca'),
@@ -151,6 +167,7 @@ class TestRouteMatch:
                     'http_method': http.HTTPMethod.GET,
                     'path_params': {'someparam': 'somevalue', 'anotherparam': [1, 2, 3]},
                     'route': {
+                        'auth': None,
                         'hits': 7,
                         'http_methods': [http.HTTPMethod.GET],
                         'id': uuid.UUID('44450e6c-7755-4edc-8fc2-12caf5c3d8ca'),
@@ -295,6 +312,45 @@ class TestResponseSelector:
         assert e.exconly(tryshort=True) == 'ValueError: No suitable response found.'
 
 
+class TestTokenAuth:
+    auth = TokenAuth(
+        method='token',
+        token=AUTH_TOKEN,
+        error_response={'status_code': 401, 'body': {'auth': 'unauthorized'}}
+    )
+
+    def test_authenticate(self):
+        mocked_request_match = cast(
+            Request, MockedRequest('GET', {'path': 'test'}, {'Authorization': f'Bearer {AUTH_TOKEN}'})
+        )
+
+        assert self.auth.authenticate(mocked_request_match) is None
+
+    @pytest.mark.parametrize('data, expectation', [
+        (
+            {},
+            'trickster.exceptions.AuthenticationError: Missing authentication header "Authorization".'
+        ),
+        (
+            {'Authorization': f'Bearer invalid_token'},
+            f'trickster.exceptions.AuthenticationError: Authentication token invalid_token doesn\'t match {AUTH_TOKEN}.'
+        ),
+        (
+            {'Authorization': f'Wrong {AUTH_TOKEN}'},
+            'trickster.exceptions.AuthenticationError: Invalid authentication header Wrong testtoken.'
+        )
+    ])
+    def test_authenticate_invalid(self, data, expectation):
+        mocked_request = cast(
+            Request, MockedRequest('GET', {'path': 'test'}, data)
+        )
+
+        with pytest.raises(AuthenticationError) as e:
+            self.auth.authenticate(mocked_request)
+
+        assert e.exconly(tryshort=True) == expectation
+
+
 class TestRoute:
     responses = [
         Response(status_code=http.HTTPStatus.OK, body={'body': 1}, hits=3),
@@ -318,6 +374,12 @@ class TestRoute:
             },
         )
     ]
+
+    auth = TokenAuth(
+        method='token',
+        token=AUTH_TOKEN,
+        error_response={'status_code': 401, 'body': {'auth': 'unauthorized'}}
+    )
 
     def test_validate_existing_response_validators_combinations(self):
         route = Route(
@@ -414,6 +476,70 @@ class TestRoute:
         assert route.get_response_validator_by_id(self.response_validators[0].id) == self.response_validators[0]
         assert route.get_response_validator_by_id(uuid.uuid4()) is None
 
+    def test_create_proper_auth(self):
+        route = Route(
+            path='test',
+            responses=self.responses,
+            http_methods=[http.HTTPMethod.GET],
+            auth=self.auth
+        )
+
+        assert isinstance(route.auth, TokenAuth)
+
+    def test_authenticate(self):
+        route = Route(
+            path='test',
+            responses=self.responses,
+            http_methods=[http.HTTPMethod.GET],
+            auth=self.auth
+        )
+        mocked_request_match = cast(
+            Request, MockedRequest('GET', {'path': 'test'}, {'Authorization': f'Bearer {AUTH_TOKEN}'})
+        )
+
+        auth_response = route.authenticate(mocked_request_match)
+
+        assert auth_response is None
+
+    @pytest.mark.parametrize(
+        'data, expectation',
+        [
+            (
+                cast(
+                    Request,
+                    MockedRequest('GET', {'path': 'test'}, {'Missing_Authorization': 'token'})
+                ),
+                'trickster.exceptions.AuthenticationError: Missing authentication header "Authorization".'
+            ),
+            (
+                cast(
+                    Request,
+                    MockedRequest('GET', {'path': 'test'}, {'Authorization': 'Wrong header'})
+                ),
+                'trickster.exceptions.AuthenticationError: Invalid authentication header Wrong header.'
+            ),
+            (
+                cast(
+                    Request,
+                    MockedRequest('GET', {'path': 'test'}, {'Authorization': 'Bearer invalid_token'})
+                ),
+                'trickster.exceptions.AuthenticationError: Authentication token invalid_token doesn\'t match testtoken.'
+            )
+        ]
+    )
+    def test_authenticate_invalid(self, data, expectation):
+        route = Route(
+            path='test',
+            responses=self.responses,
+            http_methods=[http.HTTPMethod.GET],
+            auth=self.auth
+        )
+
+        with pytest.raises(AuthenticationError) as e:
+            route.authenticate(data)
+
+        assert e.exconly(tryshort=True) == expectation
+
 
 class TestHealthcheckStatus:
     @pytest.mark.parametrize(
@@ -502,6 +628,7 @@ class TestInputRoute:
                     'path': '/test',
                 },
                 {
+                    'auth': None,
                     'http_methods': [http.HTTPMethod.GET],
                     'path': '/test',
                     'response_selector': ResponseSelector.RANDOM,
@@ -515,6 +642,7 @@ class TestInputRoute:
                     'responses': []
                 },
                 {
+                    'auth': None,
                     'http_methods': [http.HTTPMethod.GET],
                     'path': '/test',
                     'response_selector': ResponseSelector.RANDOM,
@@ -528,6 +656,7 @@ class TestInputRoute:
                     'responses': [{'status_code': 200, 'body': {}}],
                 },
                 {
+                    'auth': None,
                     'http_methods': [http.HTTPMethod.GET],
                     'path': '/test',
                     'response_selector': ResponseSelector.RANDOM,
@@ -569,6 +698,7 @@ class TestInputRoute:
                     'response_selector': ResponseSelector.FIRST,
                 },
                 {
+                    'auth': None,
                     'http_methods': [http.HTTPMethod.POST],
                     'path': '/test',
                     'response_selector': ResponseSelector.FIRST,

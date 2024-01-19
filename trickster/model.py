@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import abc
 import enum
 import http
 import functools
@@ -12,11 +13,13 @@ import time
 
 import jsonschema
 from typing_extensions import Annotated
-from pydantic import BaseModel, Field, model_serializer, model_validator
+from pydantic import BaseModel, Field, model_serializer, model_validator, ConfigDict
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from trickster.exceptions import AuthenticationError
 
-from typing import Any, Literal
+from typing import Any, Literal, Union
+
 
 HitCounter = Annotated[int, Field(gte=0, default=0, description='Number of times route or response was used')]
 JsonBody = Annotated[dict | list, Field(description='Request or response body as a json')]
@@ -127,8 +130,10 @@ class ResponseValidator(BaseModel):
             raise ValueError('Route response validation failed.')
         try:
             jsonschema.validate(response.body, self.json_schema)
-        except jsonschema.exceptions.ValidationError:
-            raise ValueError('JsonSchema validation failed.')
+        except jsonschema.exceptions.ValidationError as e:
+            raise ValueError(f'JsonSchema validation failed with message {e.message} on instance {e.instance}') from e
+        except jsonschema.exceptions.SchemaError as e:
+            raise ValueError(f'JsonSchema validation failed: {e.message}') from e
 
 
 class RouteMatch(BaseModel):
@@ -238,6 +243,53 @@ class ResponseSelector(enum.Enum):
                 raise ValueError(f'Response selection algorithm for {self.value} is not configured.')
 
 
+class Auth(BaseModel, abc.ABC):
+    """Base class for authentication."""
+
+    method: Literal['auth'] = 'auth'
+    error_response: Response | None
+
+    model_config = ConfigDict(extra='allow')
+
+    @abc.abstractmethod
+    def authenticate(self, request: Request) -> None:
+        """Implement authenticate method in subclass."""
+
+    @classmethod
+    def get_subclasses(cls) -> tuple[type[Auth], ...]:
+        """Return subclasses of base authentication model."""
+        return tuple(cls.__subclasses__())
+
+
+class TokenAuth(Auth):
+    """Authentication using cognito access token in header."""
+
+    method: Literal['token'] = 'token'  # type: ignore
+    token: str
+
+    def _get_header(self, request: Request) -> str:
+        """Get value of http header containing authentication token."""
+        header = request.headers.get('Authorization')
+        if not header:
+            raise AuthenticationError('Missing authentication header "Authorization".')
+        return header
+
+    def _get_token(self, header: str) -> str:
+        """Get authetication token from http header."""
+        match = re.match(r'Bearer (?P<token>.*)', header)
+        if not match:
+            raise AuthenticationError(f'Invalid authentication header {header}.')
+
+        return match['token']
+
+    def authenticate(self, request: Request) -> None:
+        """Check if Request contains valid token authentication, raise exception if not."""
+        header = self._get_header(request)
+        token = self._get_token(header)
+        if token != self.token:
+            raise AuthenticationError(f'Authentication token {token} doesn\'t match {self.token}.')
+
+
 class Route(BaseModel):
     """User-defined route that can match request and return a response."""
 
@@ -250,6 +302,7 @@ class Route(BaseModel):
     responses: list[Response] = Field(default_factory=list, description='Possible responses of the route')
     response_selector: ResponseSelector = Field(
         default=ResponseSelector.RANDOM, description='Strategy for response selection')
+    auth: Union[Auth.get_subclasses()] | None = Field(default=None, discriminator='method')  # type: ignore
 
     @model_validator(mode='after')  # type: ignore # github.com/python/mypy/issues/15620
     @classmethod
@@ -319,6 +372,11 @@ class Route(BaseModel):
                 return validator
         return None
 
+    def authenticate(self, request: Request) -> None:
+        """Check if request is properly authenticated."""
+        if self.auth is not None:
+            self.auth.authenticate(request)
+
 
 class HealthcheckStatus(BaseModel):
     """Healthcheck endpoint response schema."""
@@ -359,3 +417,4 @@ class InputRoute(BaseModel):
     http_methods: list[http.HTTPMethod] = [http.HTTPMethod.GET]
     response_validators: list[ResponseValidator] = []
     response_selector: ResponseSelector = ResponseSelector.RANDOM
+    auth: Union[Auth.get_subclasses()] | None = Field(discriminator='method', default=None)  # type: ignore

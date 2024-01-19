@@ -13,6 +13,7 @@ from trickster.router import get_router
 from trickster.model import Route
 
 mocked_files_path = project_root / 'tests/mocked_files'
+AUTH_TOKEN = 'testtoken'
 
 
 @pytest.fixture(scope='function', autouse=True)
@@ -38,6 +39,14 @@ def mocked_router():
             }
         ],
         'http_methods': [http.HTTPMethod.GET],
+        'auth': {
+            'method': 'token',
+            'token': AUTH_TOKEN,
+            'error_response': {
+                'status_code': 401,
+                'body': {'auth': 'unauthorized'}
+            }
+        },
         'response_validators': [
             {
                 'status_code': http.HTTPStatus.OK,

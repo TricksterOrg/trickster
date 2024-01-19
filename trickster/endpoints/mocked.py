@@ -2,10 +2,11 @@
 
 import http
 
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 
 from trickster.router import Router, get_router
+from trickster.exceptions import ResourceNotFoundError, AuthenticationError
 
 
 router = APIRouter(
@@ -20,9 +21,14 @@ def mocked_response(request: Request, mocked_router: Router = Depends(get_router
     response = None
 
     if match := mocked_router.match(request):  # noqa: SIM102 - nested if statements
-        if matched_response := match.route.get_response(match):
-            match.route.hits += 1
-            response = matched_response
+        match.route.hits += 1
+        try:
+            match.route.authenticate(request)
+            if matched_response := match.route.get_response(match):
+                response = matched_response
+        except AuthenticationError:
+            response = match.route.auth.error_response or \
+                mocked_router.get_error_response(status_code=http.HTTPStatus.UNAUTHORIZED)
     elif error_response := mocked_router.get_error_response(status_code=http.HTTPStatus.NOT_FOUND):
         response = error_response
 
@@ -31,4 +37,4 @@ def mocked_response(request: Request, mocked_router: Router = Depends(get_router
         response.delay_response()
         return response.as_fastapi_response()
     else:
-        raise HTTPException(status_code=404, detail='No route or response was found for your request.')
+        raise ResourceNotFoundError('No route or response was found for your request.')
