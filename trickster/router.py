@@ -59,10 +59,7 @@ class Router(BaseModel):
 
     def get_error_responses(self, status_code: http.HTTPStatus | None = None) -> list[Response]:
         """Get configured error response by their status code or all if status code not provided."""
-        error_responses = self.error_responses
-        if status_code:
-            error_responses = [r for r in self.error_responses if r.status_code == status_code]
-        return error_responses
+        return [r for r in self.error_responses if r.status_code == status_code or not status_code]
 
     def get_error_response(self, status_code: http.HTTPStatus) -> None | Response:
         """Get single error response by its status code.
@@ -90,7 +87,7 @@ class Router(BaseModel):
         self.error_responses.remove(error_response)
 
 
-@functools.cache
+@functools.lru_cache(typed=False)
 def get_router(config: Config = Depends(get_config)) -> Router:
     """Get a router."""
     error_responses = [Response(**response.model_dump()) for response in config.settings.error_responses]

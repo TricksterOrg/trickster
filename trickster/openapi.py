@@ -50,7 +50,7 @@ class OpenApiSpec:
                 'description': schema.description,
                 'type': schema.type.value
             }
-        return {}
+        return {}  # pragma: no cover
 
     def _object_schema_to_json_schema(self, schema: openspec.Object) -> dict[str, Any]:
         """Create json schema from object openapi schema."""
@@ -107,7 +107,7 @@ class OpenApiSpec:
                     result.update(self._anyof_schema_to_json_schema((cast(openspec.AnyOf, schema))))
                 case openspec.DataType.NULL | openspec.DataType.BOOLEAN:
                     result.update(self._schema_to_base_json_schema(schema))
-                case _:
+                case _:  # pragma: no cover
                     raise ValueError(f'Unsupported schema type {schema.type}')
         return remove_none_values(result)
 

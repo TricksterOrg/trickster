@@ -39,7 +39,7 @@ explicit_package_bases = true
 [tool.pytest.ini_options]
 testpaths = "tests"
 python_files = "*.py"
-addopts = "--showlocals -rxs -v --color=yes --durations=5 --maxfail=1 --cov=trickster --cov-report html --cov-report term"
+addopts = "--showlocals -rxs -v --color=yes --durations=5 --maxfail=1 --cov=trickster --cov-report html --cov-report term --cov-fail-under=100"
 
 [tool.ruff]
 line-length = 120

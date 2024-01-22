@@ -20,6 +20,7 @@ from trickster.exceptions import AuthenticationError
 
 from typing import Any, Literal, Union
 
+
 HitCounter = Annotated[int, Field(gte=0, default=0, description='Number of times route or response was used')]
 JsonBody = Annotated[dict | list, Field(description='Request or response body as a json')]
 PathParams = Annotated[dict[str, Any], Field(description='Parameter parsed from a route path')]
@@ -32,7 +33,7 @@ class ParametrizedPath(BaseModel):
     automatically if omitted.
 
     Parts of the url path can be replaced with placeholders. Route will then match any path as long as the rest of
-    the path matches and the variable is of specified type. E.g. `/api/v{version:int}/endpoint` will match any
+    the path matches and the variable is of specified type. E.g. `/api/v{version:integer}/endpoint` will match any
     version of the endpoint - `/api/v1/endpoint`, `/api/v1234/endpoint` etc. Name of the variable (`version` from
     above example) is not important as long as it's unique within the path.
 
@@ -94,7 +95,7 @@ class ParametrizedPath(BaseModel):
         for match in self.variables_regex.finditer(self.path):
             variable = match.groupdict()
             type_pattern = self._VARIABLE_TYPE_PATTERNS[variable['type']]
-            variable_regex = rf'(?P<{variable["name"]}>{type_pattern})'
+            variable_regex = f'(?P<{variable["name"]}>{type_pattern})'
             path_pattern = path_pattern.replace(variable['placeholder'], variable_regex)
 
         return re.compile(path_pattern)
@@ -238,7 +239,7 @@ class ResponseSelector(enum.Enum):
                 return random.choices(responses, weights=weights, k=1)[0]
             case ResponseSelector.BALANCED:
                 return min(responses, key=lambda response: response.hits)
-            case _:
+            case _:  # pragma: no cover
                 raise ValueError(f'Response selection algorithm for {self.value} is not configured.')
 
 

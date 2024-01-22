@@ -111,7 +111,7 @@ def create_route_response(
             route.validate_new_response(new_response)
             route.responses.append(new_response)
             return route
-        except pydantic.ValidationError as e:
+        except pydantic.ValidationError as e:  # pragma: no cover
             raise ValidationError() from e
     raise ResourceNotFoundError(f'Route "{route_id}" was not found.')
 
@@ -136,7 +136,7 @@ def delete_route_response_validator(
             route.response_validators.remove(validator)
             try:
                 route.validate_existing_response_validator_combinations()
-            except pydantic.ValidationError as e:
+            except pydantic.ValidationError as e:  # pragma: no cover
                 route.response_validators.append(validator)
                 raise ValidationError() from e
             return route
@@ -164,7 +164,7 @@ def create_route_response_validator(
             route.validate_new_response_validator(new_validator)
             route.response_validators.append(new_validator)
             return route
-        except pydantic.ValidationError as e:
+        except pydantic.ValidationError as e:  # pragma: no cover
             raise ValidationError(f'Failed validation: {str(e)}') from e
     raise ResourceNotFoundError(f'Route "{route_id}" was not found.')
 
@@ -184,7 +184,7 @@ def create_error_response(response: InputResponse, mocked_router: Router = Depen
         new_response = Response(**response.model_dump())
         mocked_router.add_error_response(new_response)
         return new_response
-    except pydantic.ValidationError as e:
+    except pydantic.ValidationError as e:  # pragma: no cover
         raise ValidationError(f'Failed validation: {str(e)}') from e
 
 
@@ -207,4 +207,4 @@ def delete_error_response(response_id: uuid.UUID, mocked_router: Router = Depend
     if error_response := mocked_router.get_error_response_by_id(response_id):
         mocked_router.delete_error_response(error_response)
         return mocked_router.get_error_responses()
-    raise ResourceNotFoundError(f'Error response "{error_response}" was not found.')
+    raise ResourceNotFoundError(f'Error response "{response_id}" was not found.')

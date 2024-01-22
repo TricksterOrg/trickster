@@ -1,5 +1,10 @@
 components:
   schemas:
+    SomeFakeThing:
+      type: object
+      properties:
+        message:
+          type: boolean
     CreateItemResult:
       description: Result of command to create JD.
       examples:
@@ -161,6 +166,16 @@ openapi: 3.1.0
 paths:
   /items:
     post:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: stub
+        in: query
+        schema:
+          type: boolean
       operationId: create_item_items_post
       requestBody:
         content:
@@ -181,6 +196,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SomeFakeThing'
+          description: Some fake response
       summary: Create Item
   /search:
     post:

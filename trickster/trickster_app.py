@@ -42,11 +42,11 @@ def create_app() -> FastAPI:
     return app
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     """Run Trickster application."""
     app = create_app()
     uvicorn.run(app, host='0.0.0.0', port=8080)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     main()

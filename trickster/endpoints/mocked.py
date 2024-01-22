@@ -27,7 +27,7 @@ def mocked_response(request: Request, mocked_router: Router = Depends(get_router
             if matched_response := match.route.get_response(match):
                 response = matched_response
         except AuthenticationError:
-            response = match.route.auth.error_response or \
+            response = getattr(match.route.auth, 'error_response', None) or \
                 mocked_router.get_error_response(status_code=http.HTTPStatus.UNAUTHORIZED)
     elif error_response := mocked_router.get_error_response(status_code=http.HTTPStatus.NOT_FOUND):
         response = error_response

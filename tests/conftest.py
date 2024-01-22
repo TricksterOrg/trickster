@@ -1,5 +1,6 @@
 import os
 import pathlib
+import http
 
 import pytest
 
@@ -9,8 +10,10 @@ from trickster.trickster_app import create_app
 from trickster.config import get_config
 from trickster.meta import project_root
 from trickster.router import get_router
+from trickster.model import Route
 
 mocked_files_path = project_root / 'tests/mocked_files'
+AUTH_TOKEN = 'testtoken'
 
 
 @pytest.fixture(scope='function', autouse=True)
@@ -20,6 +23,58 @@ def mocked_config(mocker, request):
     mocker.patch.dict(os.environ, {'TRICKSTER_CONF_PATH': str(file_path_arg)})
     yield get_config()
     get_config.cache_clear()
+
+
+@pytest.fixture(scope='function')
+def mocked_router():
+    payload_route = {
+        'path': '/users',
+        'response_selector': 'first',
+        'responses': [
+            {
+                'status_code': http.HTTPStatus.OK, 'body': {'user_id': 1234, 'user_name': 'Mark Twain'}
+            },
+            {
+                'status_code': http.HTTPStatus.OK, 'body': {'user_id': 5678, 'user_name': 'Charles Dickens'}
+            }
+        ],
+        'http_methods': [http.HTTPMethod.GET],
+        'auth': {
+            'method': 'token',
+            'token': AUTH_TOKEN,
+            'error_response': {
+                'status_code': 401,
+                'body': {'auth': 'unauthorized'}
+            }
+        },
+        'response_validators': [
+            {
+                'status_code': http.HTTPStatus.OK,
+                'json_schema': {
+                    '$schema': 'https://json-schema.org/draft/2020-12/schema',
+                    'required': ['user_id'],
+                    'properties': {'user_id': {'type': 'number'}, 'user_name': {'type': 'string'}}
+                }
+            }
+        ]
+    }
+
+    router = get_router(config=get_config())
+    router.add_route(Route(**payload_route))
+
+    yield router
+
+    get_router.cache_clear()
+
+
+@pytest.fixture(scope='function')
+def mocked_router_empty():
+    get_router.cache_clear()
+    router = get_router(config=get_config())
+
+    yield router
+
+    get_router.cache_clear()
 
 
 @pytest.fixture(scope='session')

@@ -8,4 +8,3 @@ class TestGetLogger:
 
     def test_get_logger_is_cached(self):
         assert get_logger() is get_logger()
-
